@@ -10,6 +10,26 @@ This is a hackathon prototype, not insurance or a production stablecoin.
 `TestUSD` is intentionally a six-decimal demo token. Never send production
 assets or private keys to this repository.
 
+## User-friendly explanation
+
+PegShield is fixed-payout protection for a USDC depeg on Creditcoin CC3
+testnet. An underwriter deposits TestUSD into a visible pool. A user connects
+a CC3 wallet, chooses coverage and a beneficiary, pays a one-time premium, and
+gets a policy whose terms are locked at purchase.
+
+If the pinned Ethereum USDC/USD aggregator emits two qualifying
+below-threshold `AnswerUpdated` events after activation, Attestcoin proves the
+exact Ethereum receipts. A permissionless relayer submits those proofs, but
+the CC3 contract makes the decision: it checks the aggregator, event topic,
+receipt success, threshold, chronology, timing, replay status, and reserve
+capacity. Once the second proof passes, the pool pays the exact coverage to the
+beneficiary stored in the policy, marks it `Claimed`, and blocks replay.
+
+In one sentence: **buy fixed coverage, prove the depeg twice, and let CC3 pay
+the locked beneficiary without a bridge or a hidden oracle.** The deployed
+threshold is an intentionally visible testnet/demo parameter, not a production
+insurance recommendation.
+
 ## Current status
 
 The offline protocol core is implemented and reproducible:
