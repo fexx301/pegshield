@@ -1,0 +1,81 @@
+name: PegShield CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pegshield-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d # v1.8.0
+        with:
+          version: 1.7.1
+      - run: forge fmt --root contracts --check
+      - run: forge test --root contracts
+      - run: forge build --root contracts --sizes
+      - run: node scripts/abi-check.mjs
+
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --recursive lint
+      - run: pnpm --recursive typecheck
+      - run: pnpm --recursive test
+      - run: pnpm --recursive build
+
+  schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate:discovery
+      - run: pnpm validate:proof
+      - run: pnpm validate:deployments
+      - name: Secret scan
+        run: |
+          set +e
+          git grep -n -I -E '(PRIVATE_KEY=[^[:space:]]{8,}|mnemonic[[:space:]:=]|BEGIN [A-Z ]+ PRIVATE KEY)' -- ':!contracts/lib' ':!node_modules' ':!worker/dist' ':!.github/workflows/ci.yml'
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "secret-like material found" >&2
+            exit 1
+          fi
+          if [ "$status" -ne 1 ]; then
+            exit "$status"
+          fi
+
+  e2e-local:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @pegshield/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @pegshield/web build
+      - run: pnpm --filter @pegshield/web e2e

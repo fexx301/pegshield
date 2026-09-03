@@ -1,0 +1,180 @@
+{
+  "$schema": "./schemas/discovery-lock.schema.json",
+  "observedAt": "2026-09-01T19:14:00Z",
+  "gitCommit": "fb13d8fb22dafe8d1d6dcdb7277dae0ea4559ce1",
+  "networks": {
+    "cc3": {
+      "chainId": 102031,
+      "rpcUrl": "https://rpc.cc3-testnet.creditcoin.network",
+      "latestBlock": 5412703,
+      "blockProver": {
+        "address": "0x0000000000000000000000000000000000000FD2",
+        "codeHash": null
+      },
+      "chainInfo": {
+        "address": "0x0000000000000000000000000000000000000fd3",
+        "codeHash": null
+      },
+      "decoder": {
+        "required": true,
+        "address": "0x731c345d79Fb8BbDC541f9DF3b6317585F849F9f",
+        "codeHash": "0xb549c9d8eaf7d361192f8e363fe98717464441e2dd26e2b3bd1e0725df73a065",
+        "fixtureTransactionType": 2
+      }
+    },
+    "ethereum": {
+      "chainId": 1,
+      "attestcoinChainKey": 3,
+      "usdcUsdProxy": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+      "underlyingAggregator": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+      "aggregatorCodeHash": "0x16f41184f797cb8f8918680df0ebf2a97cc3192aa6b104615f61096fc674f2aa",
+      "feedDecimals": 8,
+      "description": "USDC / USD",
+      "answerUpdatedTopic0": "0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f",
+      "answerUpdatedAbi": {
+        "signature": "AnswerUpdated(int256,uint256,uint256)",
+        "topics": [
+          "topic0",
+          "indexed int256 current",
+          "indexed uint256 roundId"
+        ],
+        "data": "uint256 updatedAt"
+      }
+    }
+  },
+  "attestcoin": {
+    "sdkPackage": "@gluwa/usc-sdk",
+    "sdkVersion": "0.18.0",
+    "proofServiceUrl": "https://prover.cc3-testnet.creditcoin.network",
+    "proofServiceHealth": {
+      "endpoint": "https://prover.cc3-testnet.creditcoin.network/api/v1/attested-height/3",
+      "attestedHeight": 25883540
+    },
+    "sdkEntrypoint": "proofProvider.service.ProofBuilder",
+    "sdkProofMethod": "new ProofBuilder(chainKey, builderUrl, timeout).getProof(transactionHash)",
+    "proofTypeDeclaration": "dist/proof-provider/index.d.ts#ContinuityResponse",
+    "solidityVerifierInterface": "dist/block-prover/block_prover.json#verify(uint64,uint64,bytes,tuple,tuple)",
+    "receiptStatusRule": "encoded receipt receiptStatus === 1; source RPC receipt status === success",
+    "verificationReturnShape": "verify(uint64,uint64,bytes,(bytes32,(bytes32,bool)[]),(bytes32,bytes32[])) returns (bool)"
+  },
+  "fixture": {
+    "transactionHash": "0x60f65e8b0b14daf28495f367ed8f46ade4ebabec4e4b13c86a3f55a7b2f34245",
+    "blockNumber": 25881095,
+    "rpcBlockLogIndex": 516,
+    "receiptLogPosition": 2,
+    "roundId": "1166",
+    "answer": "99989777",
+    "updatedAt": 1788249611,
+    "proofSha256": "sha256:e30ebb097d702bc1cccb365ce6404f5dc131e3ef95dbffb1331072f94ac0a277",
+    "proofBytes": 10760,
+    "txBytesLength": 4544,
+    "generationMs": 7786,
+    "verificationGasEstimate": null,
+    "cc3VerificationTransaction": "eth_call:success"
+  },
+  "toolchain": {
+    "node": "v24.14.0",
+    "pnpm": "11.22.0",
+    "forge": "1.7.1+4072e48705af9d93e3c0f6e29e93b5e9a40caed8",
+    "solc": "0.8.28",
+    "frontendLockfileSha256": null
+  },
+  "evidence": [
+    {
+      "field": "networks.cc3.chainId",
+      "source": "rpc",
+      "reference": "https://rpc.cc3-testnet.creditcoin.network",
+      "command": "cast chain-id --rpc-url $CC3_RPC_URL",
+      "observed": "102031",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.cc3.latestBlock",
+      "source": "rpc",
+      "reference": "https://rpc.cc3-testnet.creditcoin.network",
+      "command": "cast block-number --rpc-url $CC3_RPC_URL",
+      "observed": "5412703",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.ethereum.proxyAndAggregator",
+      "source": "rpc",
+      "reference": "https://ethereum-rpc.publicnode.com",
+      "command": "cast call $USDC_USD_PROXY_ADDRESS aggregator() --rpc-url $ETHEREUM_RPC_URL",
+      "observed": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 -> 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.ethereum.feedMetadata",
+      "source": "rpc",
+      "reference": "https://ethereum-rpc.publicnode.com",
+      "command": "cast call proxy decimals() and description() --rpc-url $ETHEREUM_RPC_URL",
+      "observed": "8; USDC / USD",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "fixture.sourceLog",
+      "source": "live-transaction",
+      "reference": "0x60f65e8b0b14daf28495f367ed8f46ade4ebabec4e4b13c86a3f55a7b2f34245",
+      "command": "cast receipt $SOURCE_TX_HASH --rpc-url $ETHEREUM_RPC_URL --json",
+      "observed": "{\"transactionHash\":\"0x60f65e8b0b14daf28495f367ed8f46ade4ebabec4e4b13c86a3f55a7b2f34245\",\"blockNumber\":\"25881095\",\"transactionIndex\":186,\"rpcBlockLogIndex\":516,\"receiptLogPosition\":2,\"emitter\":\"0xc9e1a09622afdb659913fefe800feae5dbbfe9d7\",\"topic0\":\"0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f\",\"topics\":[\"0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f\",\"0x0000000000000000000000000000000000000000000000000000000005f5b911\",\"0x000000000000000000000000000000000000000000000000000000000000048e\"],\"data\":\"0x000000000000000000000000000000000000000000000000000000006a96860b\",\"answer\":\"99989777\",\"roundId\":\"1166\",\"updatedAt\":\"1788249611\",\"receiptStatus\":\"success\"}",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "attestcoin.proofService",
+      "source": "official-doc",
+      "reference": "https://prover.cc3-testnet.creditcoin.network/api/v1/attested-height/3",
+      "command": "GET /api/v1/attested-height/3",
+      "observed": "{\"attestedHeight\":25883540}",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "attestcoin.sdkProof",
+      "source": "installed-package",
+      "reference": "node_modules/@gluwa/usc-sdk/dist/proof-provider",
+      "command": "new proofProvider.service.ProofBuilder(3, url, 30000).getProof(txHash)",
+      "observed": "{\"chainKey\":3,\"headerNumber\":25881095,\"txIndex\":186,\"txBytesLength\":4544,\"merkleSiblings\":9,\"continuityRoots\":6,\"cached\":true}",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.cc3.blockProver.verify",
+      "source": "live-transaction",
+      "reference": "0x0000000000000000000000000000000000000FD2",
+      "command": "eth_call verify(uint64,uint64,bytes,tuple,tuple)",
+      "observed": "true",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.cc3.decoder",
+      "source": "live-transaction",
+      "reference": "0x731c345d79Fb8BbDC541f9DF3b6317585F849F9f",
+      "command": "eth_call getTransactionType(bytes)",
+      "observed": "2",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.cc3.chainInfo",
+      "source": "live-transaction",
+      "reference": "0x0000000000000000000000000000000000000fd3",
+      "command": "eth_call get_chain_by_key(uint64)",
+      "observed": "{\"info\":{\"chainKey\":\"3\",\"chainId\":\"1\",\"chainName\":\"0x457468657265756d\",\"chainEncoding\":1},\"exists\":true}",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.cc3.latestAttestation",
+      "source": "live-transaction",
+      "reference": "0x0000000000000000000000000000000000000fd3",
+      "command": "eth_call get_latest_attestation_height_and_hash(uint64)",
+      "observed": "{\"height\":\"25883540\",\"hash\":\"0xcd2ef6e15859eeb0e7b3494c014a0fb8af68a8d08677913d620ea3d16d09a24a\",\"isAttestation\":true,\"exists\":true}",
+      "observedAt": "2026-09-01T16:19:09.642Z"
+    },
+    {
+      "field": "networks.ethereum.aggregatorCodeHash",
+      "source": "rpc",
+      "reference": "https://ethereum-rpc.publicnode.com",
+      "command": "eth_getCode 0xc9e1a09622afdb659913fefe800feae5dbbfe9d7 then keccak256",
+      "observed": "bytes=22337; codeHash=0x16f41184f797cb8f8918680df0ebf2a97cc3192aa6b104615f61096fc674f2aa",
+      "observedAt": "2026-09-01T19:14:00Z"
+    }
+  ]
+}

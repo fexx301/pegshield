@@ -1,0 +1,20 @@
+packages:
+  - contracts
+  - worker
+  - web
+  - packages/*
+
+# Explicitly allow native builds required by the pinned SDK/runtime stack.
+onlyBuiltDependencies:
+  - bufferutil
+  - esbuild
+  - keccak
+  - sharp
+  - utf-8-validate
+
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  sharp: true
+  utf-8-validate: true

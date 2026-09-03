@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PegShield CC3 deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "network",
+    "source",
+    "accounts",
+    "roles",
+    "dependencies",
+    "contracts",
+    "product",
+    "demoPolicy",
+    "deployedAt"
+  ],
+  "properties": {
+    "$schema": { "const": "../docs/schemas/deployment.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "chainId", "rpcUrl"],
+      "properties": {
+        "name": { "const": "creditcoin-cc3-testnet" },
+        "chainId": { "const": 102031 },
+        "rpcUrl": { "type": "string", "format": "uri" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gitCommit", "solc", "optimizerRuns", "evmVersion"],
+      "properties": {
+        "gitCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "solc": { "const": "0.8.28" },
+        "optimizerRuns": { "const": 200 },
+        "evmVersion": { "const": "london" }
+      }
+    },
+    "accounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deployer", "underwriter", "treasury", "policyholder"],
+      "properties": {
+        "deployer": { "$ref": "#/$defs/address" },
+        "underwriter": { "$ref": "#/$defs/address" },
+        "treasury": { "$ref": "#/$defs/address" },
+        "policyholder": { "$ref": "#/$defs/address" }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultAdmin", "underwriter"],
+      "properties": {
+        "defaultAdmin": { "$ref": "#/$defs/address" },
+        "underwriter": { "$ref": "#/$defs/address" }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockProver", "chainInfo", "decoder", "sourceAggregator"],
+      "properties": {
+        "blockProver": { "$ref": "#/$defs/dependency" },
+        "chainInfo": { "$ref": "#/$defs/dependency" },
+        "decoder": { "$ref": "#/$defs/dependency" },
+        "sourceAggregator": { "$ref": "#/$defs/dependency" }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["testUSD", "adapter", "pool"],
+      "properties": {
+        "testUSD": { "$ref": "#/$defs/deployedContract" },
+        "adapter": { "$ref": "#/$defs/deployedContract" },
+        "pool": { "$ref": "#/$defs/deployedContract" }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "creationTxHash",
+        "chainKey",
+        "aggregator",
+        "feedDecimals",
+        "triggerBelow",
+        "activationDelay",
+        "policyDuration",
+        "claimGracePeriod",
+        "minBreachDuration",
+        "premiumBps",
+        "maxCoveragePerPolicy",
+        "demoOnly"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/decimalPositive" },
+        "creationTxHash": { "$ref": "#/$defs/hash" },
+        "chainKey": { "const": "3" },
+        "aggregator": { "$ref": "#/$defs/address" },
+        "feedDecimals": { "const": 8 },
+        "triggerBelow": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "activationDelay": { "type": "integer", "minimum": 1 },
+        "policyDuration": { "type": "integer", "minimum": 1 },
+        "claimGracePeriod": { "type": "integer", "minimum": 1 },
+        "minBreachDuration": { "type": "integer", "minimum": 1 },
+        "premiumBps": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "maxCoveragePerPolicy": { "$ref": "#/$defs/decimalPositive" },
+        "demoOnly": { "const": true }
+      }
+    },
+    "demoPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "purchaseTxHash",
+        "purchaseBlockNumber",
+        "holder",
+        "beneficiary",
+        "coverage",
+        "premium",
+        "purchasedAt",
+        "startsAt",
+        "endsAt",
+        "state"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/decimalPositive" },
+        "purchaseTxHash": { "$ref": "#/$defs/hash" },
+        "purchaseBlockNumber": { "type": "integer", "minimum": 0 },
+        "holder": { "$ref": "#/$defs/address" },
+        "beneficiary": { "$ref": "#/$defs/address" },
+        "coverage": { "$ref": "#/$defs/decimalPositive" },
+        "premium": { "type": "string", "pattern": "^[0-9]+$" },
+        "purchasedAt": { "type": "integer", "minimum": 0 },
+        "startsAt": { "type": "integer", "minimum": 0 },
+        "endsAt": { "type": "integer", "minimum": 0 },
+        "state": { "type": "integer", "enum": [0, 1, 2, 3] }
+      }
+    },
+    "deployedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "decimalPositive": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+    "deployedContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "txHash", "blockNumber", "codeHash"],
+      "properties": {
+        "address": { "$ref": "#/$defs/address" },
+        "txHash": { "$ref": "#/$defs/hash" },
+        "blockNumber": { "type": "integer", "minimum": 0 },
+        "codeHash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "codeHash", "precompile"],
+      "properties": {
+        "address": { "$ref": "#/$defs/address" },
+        "codeHash": {
+          "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }]
+        },
+        "precompile": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "pegshield-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.14.0 <25"
+  },
+  "scripts": {
+    "format": "pnpm format:sol && pnpm format:ts",
+    "format:sol": "forge fmt --root contracts",
+    "format:sol:check": "forge fmt --root contracts --check",
+    "format:ts": "prettier --write .",
+    "format:ts:check": "prettier --check .",
+    "format:check": "pnpm format:sol:check && pnpm format:ts:check",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm test:contracts && pnpm test:worker && pnpm test:web",
+    "test:contracts": "forge test --root contracts -vvv",
+    "test:contracts:gas": "forge test --root contracts --gas-report",
+    "test:worker": "pnpm --filter @pegshield/worker test",
+    "test:web": "pnpm --filter @pegshield/web test",
+    "build": "pnpm --recursive build",
+    "validate:discovery": "node scripts/validate-json.mjs docs/schemas/discovery-lock.schema.json docs/discovery-lock.json",
+    "validate:proof": "node scripts/validate-json.mjs docs/schemas/proof-artifact.schema.json worker/fixtures/historical-proof.json",
+    "validate:deployments": "node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet.json && node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet-v2.json",
+    "preflight:deployment": "node scripts/preflight-deployment.mjs",
+    "demo:trigger": "node scripts/derive-demo-trigger.mjs",
+    "deploy:manifest": "node scripts/generate-deployment-manifest.mjs",
+    "generate": "node scripts/generate.mjs",
+    "abi:check": "node scripts/abi-check.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm abi:check && pnpm validate:discovery && pnpm validate:proof && pnpm validate:deployments"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1",
+    "ajv-cli": "5.0.0",
+    "ajv-formats": "3.0.1",
+    "prettier": "3.5.3"
+  }
+}

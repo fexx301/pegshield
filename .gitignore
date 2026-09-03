@@ -1,0 +1,47 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.deploy.example
+*.pem
+*.key
+*.mnemonic
+
+# Private planning and operational evidence; keep local, never publish.
+docs/evidence/P00-recon.md
+docs/evidence/P01-toolchain.md
+docs/evidence/P12-live-policy.md
+docs/evidence/P13-live-observations.md
+docs/evidence/P18-release.md
+docs/evidence/P20-v2-deployment.md
+docs/evidence/P22-live-confirmation-payout.md
+docs/evidence/P24-live-browser-purchase.md
+docs/evidence/P25-live-browser-claims.md
+docs/evidence/P26-public-links.md
+docs/gates.md
+
+# Dependencies and build output
+node_modules/
+dist/
+.next/
+test-results/
+web/test-results/
+coverage/
+out/
+*.tsbuildinfo
+cache/
+artifacts/
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Generated/private proof material
+proofs/
+*.proof
+*.proof.json
+*.calldata.hex
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/

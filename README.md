@@ -1,0 +1,137 @@
+# PegShield
+
+PegShield is an evidence-first parametric USDC depeg protection prototype for
+Creditcoin CC3 testnet. A permissionless relayer submits an Attestcoin proof of
+an Ethereum `AnswerUpdated` receipt; the CC3 pool checks the source chronology,
+threshold, replay status, and reserve accounting before paying a fixed amount
+of demo TestUSD to the beneficiary stored at purchase.
+
+This is a hackathon prototype, not insurance or a production stablecoin.
+`TestUSD` is intentionally a six-decimal demo token. Never send production
+assets or private keys to this repository.
+
+## Current status
+
+The offline protocol core is implemented and reproducible:
+
+- Attestcoin/CC3 discovery is locked at chain ID `102031`, with the official
+  BlockProver, ChainInfo, EVM-v1 decoder, and a verified Ethereum fixture.
+- `AttestcoinVerifierAdapter` calls the official proof boundary and exposes
+  only an authenticated receipt log.
+- `PegShieldPool` has exact token-delta accounting, immutable product/policy
+  terms, two-stage observation state transitions, expiry, replay protection,
+  and effects-before-transfer payout ordering.
+- 62 Foundry tests pass, including 256-run invariant properties and an ERC20
+  callback/reentrancy test. The worker has 21 deterministic tests covering
+  artifact integrity, exact event filtering, bounded proof-service behavior,
+  and CC3 claim calldata. The web build and local Playwright smoke test pass.
+- The CC3 deployment is live on testnet and recorded in the validated
+  [`deployments/cc3-testnet.json`](deployments/cc3-testnet.json) manifest.
+  Funded credentials remain local and ignored. The web dashboard reads the
+  deployed pool when `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` is configured. It
+  now exposes wallet-gated exact-premium purchase and verified-proof claim
+  controls. Funded-wallet and claim-rehearsal evidence is kept in a separate
+  private release packet; this public checkout contains the implementation and
+  protocol documentation.
+
+Public technical evidence lives in [`docs/evidence`](docs/evidence). Private
+planning, wallet-linked evidence, and release notes are kept outside public
+history.
+
+## Architecture
+
+```text
+Ethereum USDC/USD aggregator receipt
+        │
+        ▼
+Attestcoin proof service → CC3 BlockProver + EVM-v1 decoder
+        │  authenticated receipt log
+        ▼
+AttestcoinVerifierAdapter (opaque proof bytes in, verified log out)
+        │
+        ▼
+PegShieldPool (terms, timing, threshold, replay, reserve, payout)
+        │
+        ▼
+Immutable beneficiary receives exact TestUSD coverage
+```
+
+The adapter stores an authenticated transaction-envelope digest. It does not
+pretend that this digest is the Ethereum RPC transaction hash; the RPC hash is
+retained in off-chain evidence and worker artifacts.
+
+## Local setup
+
+The pinned toolchain is Node `24.14.0`, pnpm `11.22.0`, Foundry `1.7.1`, and
+Solidity `0.8.28`. The Foundry EVM target is London because CC3 testnet
+headers do not expose `prevrandao`; this is required for script simulation and
+broadcast compatibility.
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm check
+```
+
+Useful focused commands:
+
+```bash
+forge test --root contracts -vvv
+forge test --root contracts --gas-report
+pnpm --filter @pegshield/worker test
+pnpm --filter @pegshield/worker build
+node worker/dist/cli.js config validate
+node worker/dist/cli.js proof inspect --file worker/fixtures/historical-proof.json
+node worker/dist/cli.js proof encode --file worker/fixtures/historical-proof.json --out /tmp/pegshield-proof.hex
+node worker/dist/cli.js events scan --from-block <start> --to-block <end> --trigger-below <feed-units>
+node worker/dist/cli.js proof simulate --policy <id> --stage breach --file proofs/<event>.json
+# proof submit is permissionless but requires a locally configured relayer key:
+node worker/dist/cli.js proof submit --policy <id> --stage breach --file proofs/<event>.json
+pnpm --filter @pegshield/web build
+pnpm preflight:deployment
+pnpm demo:trigger -- --margin-bps 100
+```
+
+### Getting demo TestUSD
+
+TestUSD is the deployment’s six-decimal, testnet-only ERC-20 at
+`0xa1049Af6F8c324AB14f06b693CB711f98D6a36eF`. It has no public faucet: only
+the explicitly authorized `MINTER_ROLE` operator can mint it. For a browser
+rehearsal, add that contract to the wallet with symbol `tUSD` and six decimals,
+then have the demo operator mint or transfer at least the quoted premium to the
+connected CC3 address. A 100-TestUSD policy requires 2.5 TestUSD plus native
+CTC for gas. Never use production assets or expose private keys.
+
+The preflight command is read-only. It checks both RPC chain IDs, discovered
+dependency availability/code hashes, the pinned Ethereum aggregator, a real
+BlockProver call using the committed fixture, and ChainInfo’s latest
+attestation. The deployment script requires environment-only keys and refuses
+any non-CC3 network. Start from [`.env.deploy.example`](.env.deploy.example);
+do not fill it in a commit. After deployment, `pnpm deploy:manifest` reads the
+broadcast receipts, verifies live roles/product/policy/code hashes, and writes
+the public manifest. Claim simulation and submission consume that manifest and
+the exact normalized proof artifact; no decoded price is accepted as input.
+Use `pnpm demo:trigger -- --margin-bps 100` immediately before deployment to
+derive `DEMO_TRIGGER_BELOW` from the current signed source answer. The command
+prints a clearly labeled test-only threshold; review it and copy only the
+`envLine` into your local `.env.deploy`.
+
+If a CC3 RPC interruption leaves later setup calls outside Foundry's broadcast
+receipt list, pass their independently verified hashes explicitly, for example:
+`pnpm deploy:manifest -- --product-tx-hash <createProduct-tx> --policy-tx-hash
+<buyPolicy-tx>`. The generator fetches and validates those receipts live before
+writing the manifest.
+
+## Trust and limitations
+
+PegShield trusts the public CC3 verifier dependencies, Ethereum receipt data,
+and underwriter-deposited TestUSD. It does not trust a relayer, browser state,
+caller-selected beneficiary, or caller-supplied price/round/timestamp. The
+prototype intentionally omits governance, upgrades, cancellation, refunds,
+cross-chain payout assets, and production economic parameters. The live
+deployment and browser E2E evidence are complete. Public explorer and frontend
+links are provided separately with the release submission.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

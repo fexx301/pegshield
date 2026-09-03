@@ -1,0 +1,28 @@
+{
+  "name": "@pegshield/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc",
+    "discover": "tsx src/discover.ts",
+    "proof:fixture": "tsx src/fixture.ts",
+    "proof:verify-fixture": "tsx src/fixture.ts --verify-only",
+    "cli": "tsx src/cli.ts",
+    "serve": "node dist/server.js"
+  },
+  "dependencies": {
+    "@gluwa/usc-sdk": "0.18.0",
+    "viem": "2.23.7",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "tsx": "4.19.3",
+    "typescript": "5.8.2",
+    "vitest": "3.0.9"
+  }
+}
