@@ -38,6 +38,27 @@ Public technical evidence lives in [`docs/evidence`](docs/evidence). Private
 planning, wallet-linked evidence, and release notes are kept outside public
 history.
 
+## Live demo and public evidence
+
+PegShield is deployed on Creditcoin CC3 testnet (chain ID `102031`). The public
+links below are safe to share with reviewers:
+
+- [Open the live dashboard](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2)
+- [PegShield pool on CC3](https://creditcoin-testnet.blockscout.com/address/0x2ff714381565d636b50cc0b8d79930c225f311ea)
+- [TestUSD token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa1049af6f8c324ab14f06b693cb711f98d6a36ef)
+- [Attestcoin verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x11e9cb6cc5aca71789cf1ffaf73fbef971f2e9fa)
+- [Policy 2 purchase](https://creditcoin-testnet.blockscout.com/tx/0xf290b4c7719e469022e090a9ebc6954c7dd50fc3f55e089af918b4b076b538fc)
+- [Breach observation](https://creditcoin-testnet.blockscout.com/tx/0xbf43319f0b2adcc95a1c629bb076f588fb884a19b43fc5342d1ba6d7ac5dbaa4)
+- [Confirmation and payout](https://creditcoin-testnet.blockscout.com/tx/0x96039de10e844504a847b8f1c1a99e71e58de03b6dd27284d268e9497054e770)
+- [Ethereum source event, round 1169](https://etherscan.io/tx/0xb9f980da1350fbb2350fe6b6bdbc3fba3717c556662e3b6b275b495f84ca6eb0)
+- [Ethereum source event, round 1170](https://etherscan.io/tx/0x5adcdf88fe55221c6e23d1aad108bf1e75120b0165792a0ed12146159a95cb43)
+
+Attestcoin is the trust boundary: the relayer supplies a proof of the exact
+Ethereum receipt, the CC3 verifier authenticates it, and the adapter exposes
+only the locked `AnswerUpdated` event to the pool. The public dashboard shows
+the terminal demo policy and its evidence; all contract writes remain wallet-
+gated and testnet-only.
+
 ## Architecture
 
 ```text
