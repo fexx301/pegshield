@@ -118,9 +118,17 @@ export function PegShieldDashboard() {
     | "error"
   >("idle");
   const [purchaseError, setPurchaseError] = useState<string>();
-  const [claimArtifact, setClaimArtifact] = useState<ProofArtifact>();
-  const [claimArtifactName, setClaimArtifactName] = useState<string>();
-  const [claimArtifactError, setClaimArtifactError] = useState<string>();
+  const [firstClaimArtifact, setFirstClaimArtifact] = useState<ProofArtifact>();
+  const [firstClaimArtifactName, setFirstClaimArtifactName] =
+    useState<string>();
+  const [firstClaimArtifactError, setFirstClaimArtifactError] =
+    useState<string>();
+  const [confirmationClaimArtifact, setConfirmationClaimArtifact] =
+    useState<ProofArtifact>();
+  const [confirmationClaimArtifactName, setConfirmationClaimArtifactName] =
+    useState<string>();
+  const [confirmationClaimArtifactError, setConfirmationClaimArtifactError] =
+    useState<string>();
   const [claimStatus, setClaimStatus] = useState<
     "idle" | "validating" | "simulating" | "submitting" | "confirmed" | "error"
   >("idle");
@@ -379,7 +387,6 @@ export function PegShieldDashboard() {
   const activationComplete = Boolean(
     hasLivePolicy && livePolicy && nowSeconds >= livePolicy.startsAt,
   );
-  const breachObserved = livePolicy?.state === 1 || livePolicy?.state === 2;
   const terminalPolicy = livePolicy?.state === 2 || livePolicy?.state === 3;
   const policyStateLabel = hasLivePolicy
     ? (["Active", "Breach observed", "Claimed", "Expired"][
@@ -387,32 +394,41 @@ export function PegShieldDashboard() {
       ] ?? "Unknown")
     : "Not loaded";
 
-  const claimStage: "breach" | "confirmation" =
-    livePolicy?.state === 1 || livePolicy?.state === 2
-      ? "confirmation"
-      : "breach";
-  const claimFunctionName =
-    claimStage === "breach" ? "submitBreachProof" : "submitConfirmationProof";
-  const encodedClaimProof = claimArtifact
-    ? encodeProof(claimArtifact)
+  const encodedFirstClaimProof = firstClaimArtifact
+    ? encodeProof(firstClaimArtifact)
     : undefined;
-  const claimReceiptLogPosition = claimArtifact
-    ? BigInt(claimArtifact.source.receiptLogPosition)
+  const firstClaimReceiptLogPosition = firstClaimArtifact
+    ? BigInt(firstClaimArtifact.source.receiptLogPosition)
     : 0n;
-  const claimData = encodedClaimProof
-    ? encodeFunctionData({
-        abi: CLAIM_WRITE_ABI,
-        functionName: claimFunctionName,
-        args: [selectedPolicyId, encodedClaimProof, claimReceiptLogPosition],
-      })
+  const encodedConfirmationClaimProof = confirmationClaimArtifact
+    ? encodeProof(confirmationClaimArtifact)
     : undefined;
+  const confirmationClaimReceiptLogPosition = confirmationClaimArtifact
+    ? BigInt(confirmationClaimArtifact.source.receiptLogPosition)
+    : 0n;
+  const claimData =
+    encodedFirstClaimProof && encodedConfirmationClaimProof
+      ? encodeFunctionData({
+          abi: CLAIM_WRITE_ABI,
+          functionName: "submitClaim",
+          args: [
+            selectedPolicyId,
+            encodedFirstClaimProof,
+            firstClaimReceiptLogPosition,
+            encodedConfirmationClaimProof,
+            confirmationClaimReceiptLogPosition,
+          ],
+        })
+      : undefined;
   const claimSimulationEnabled = Boolean(
     PEGSHIELD_POOL_ADDRESS &&
       connected &&
       address &&
       hasLivePolicy &&
-      claimArtifact &&
-      encodedClaimProof,
+      firstClaimArtifact &&
+      confirmationClaimArtifact &&
+      encodedFirstClaimProof &&
+      encodedConfirmationClaimProof,
   );
   const {
     data: claimSimulation,
@@ -422,11 +438,13 @@ export function PegShieldDashboard() {
   } = useSimulateContract({
     address: poolAddress,
     abi: CLAIM_WRITE_ABI,
-    functionName: claimFunctionName,
+    functionName: "submitClaim",
     args: [
       selectedPolicyId,
-      encodedClaimProof ?? "0x",
-      claimReceiptLogPosition,
+      encodedFirstClaimProof ?? "0x",
+      firstClaimReceiptLogPosition,
+      encodedConfirmationClaimProof ?? "0x",
+      confirmationClaimReceiptLogPosition,
     ],
     account: address,
     chainId: CC3_TESTNET.id,
@@ -570,30 +588,43 @@ export function PegShieldDashboard() {
     }
   }
 
-  async function handleProofFile(event: ChangeEvent<HTMLInputElement>) {
+  async function handleProofFile(
+    stage: "first" | "confirmation",
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
-    setClaimArtifact(undefined);
-    setClaimArtifactName(undefined);
-    setClaimArtifactError(undefined);
+    const setArtifact =
+      stage === "first" ? setFirstClaimArtifact : setConfirmationClaimArtifact;
+    const setArtifactName =
+      stage === "first"
+        ? setFirstClaimArtifactName
+        : setConfirmationClaimArtifactName;
+    const setArtifactError =
+      stage === "first"
+        ? setFirstClaimArtifactError
+        : setConfirmationClaimArtifactError;
+    setArtifact(undefined);
+    setArtifactName(undefined);
+    setArtifactError(undefined);
     setClaimError(undefined);
     setClaimStatus("idle");
     if (!file) return;
     if (file.size > 256 * 1024) {
-      setClaimArtifactError(
+      setArtifactError(
         "Proof artifact is larger than the 256 KiB safety limit.",
       );
       return;
     }
-    setClaimArtifactName(file.name);
+    setArtifactName(file.name);
     setClaimStatus("validating");
     try {
       const parsed: unknown = JSON.parse(await file.text());
       const verified = await validateProofArtifact(parsed);
-      setClaimArtifact(verified.artifact);
+      setArtifact(verified.artifact);
       setClaimStatus("idle");
     } catch (error) {
       setClaimStatus("error");
-      setClaimArtifactError(describeError(error));
+      setArtifactError(describeError(error));
     }
   }
 
@@ -1120,9 +1151,8 @@ export function PegShieldDashboard() {
               >
                 <h3>Awaiting two proofs</h3>
                 <p>
-                  {breachObserved
-                    ? "First breach is recorded; confirmation must be later in round, timestamp, and minimum duration."
-                    : "First breach records a source event. Confirmation must be later in round, timestamp, and minimum duration."}
+                  Both observations are submitted atomically. Confirmation must
+                  be later in round, timestamp, and minimum duration.
                 </p>
                 <span className="timeline-meta">
                   {hasLivePolicy
@@ -1203,59 +1233,94 @@ export function PegShieldDashboard() {
                 <span className="mono-label">Prepared proof relay</span>
                 <h3 id="claim-heading">Settle from verified evidence</h3>
               </div>
-              <span className="demo-tag">
-                {claimStage === "breach" ? "First observation" : "Confirmation"}
-              </span>
+              <span className="demo-tag">Atomic claim</span>
             </div>
             <p className="claim-intro">
-              Select a normalized artifact produced by the worker. The browser
-              verifies its locked source, checksum, and proof shape, then asks
-              CC3 to simulate before your wallet can submit anything.
+              Select two normalized artifacts produced by the worker. The
+              browser validates both checksums and proof shapes, then CC3
+              verifies and settles the ordered pair in one transaction. No
+              relayer can pin a late first observation.
             </p>
             <div className="field">
-              <label htmlFor="proof-artifact">Normalized proof artifact</label>
+              <label htmlFor="first-proof-artifact">
+                First observation proof
+              </label>
               <input
-                id="proof-artifact"
+                id="first-proof-artifact"
                 type="file"
                 accept="application/json,.json"
-                onChange={handleProofFile}
-                aria-describedby="proof-artifact-help"
+                onChange={(event) => void handleProofFile("first", event)}
+                aria-describedby="first-proof-artifact-help"
               />
-              <small id="proof-artifact-help">
+              <small id="first-proof-artifact-help">
                 Maximum 256 KiB. The artifact must use the pinned Ethereum
                 aggregator and AnswerUpdated topic.
               </small>
             </div>
-            {claimArtifact && (
+            {firstClaimArtifact && (
               <dl className="claim-facts">
                 <div>
-                  <dt>Selected file</dt>
-                  <dd>{claimArtifactName ?? "proof.json"}</dd>
+                  <dt>First file</dt>
+                  <dd>{firstClaimArtifactName ?? "proof.json"}</dd>
                 </div>
                 <div>
-                  <dt>Source event</dt>
+                  <dt>First event</dt>
                   <dd>
-                    round {claimArtifact.decodedExpected.roundId} · answer{" "}
-                    {claimArtifact.decodedExpected.answer}
+                    round {firstClaimArtifact.decodedExpected.roundId} · answer{" "}
+                    {firstClaimArtifact.decodedExpected.answer}
                   </dd>
                 </div>
                 <div>
-                  <dt>Source timestamp</dt>
-                  <dd>{claimArtifact.decodedExpected.updatedAt}</dd>
-                </div>
-                <div>
-                  <dt>Artifact checksum</dt>
-                  <dd>{claimArtifact.integrity.canonicalJsonSha256}</dd>
-                </div>
-                <div>
-                  <dt>Encoded proof</dt>
-                  <dd>{proofDigest(claimArtifact)}</dd>
+                  <dt>First proof digest</dt>
+                  <dd>{proofDigest(firstClaimArtifact)}</dd>
                 </div>
               </dl>
             )}
-            {claimArtifactError && (
+            {firstClaimArtifactError && (
               <p className="claim-status error" role="alert">
-                {claimArtifactError}
+                {firstClaimArtifactError}
+              </p>
+            )}
+            <div className="field">
+              <label htmlFor="confirmation-proof-artifact">
+                Confirmation observation proof
+              </label>
+              <input
+                id="confirmation-proof-artifact"
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) =>
+                  void handleProofFile("confirmation", event)
+                }
+                aria-describedby="confirmation-proof-artifact-help"
+              />
+              <small id="confirmation-proof-artifact-help">
+                Must be a distinct later round and satisfy the product’s minimum
+                observation interval.
+              </small>
+            </div>
+            {confirmationClaimArtifact && (
+              <dl className="claim-facts">
+                <div>
+                  <dt>Confirmation file</dt>
+                  <dd>{confirmationClaimArtifactName ?? "proof.json"}</dd>
+                </div>
+                <div>
+                  <dt>Confirmation event</dt>
+                  <dd>
+                    round {confirmationClaimArtifact.decodedExpected.roundId} ·
+                    answer {confirmationClaimArtifact.decodedExpected.answer}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Confirmation digest</dt>
+                  <dd>{proofDigest(confirmationClaimArtifact)}</dd>
+                </div>
+              </dl>
+            )}
+            {confirmationClaimArtifactError && (
+              <p className="claim-status error" role="alert">
+                {confirmationClaimArtifactError}
               </p>
             )}
             <div className="claim-actions">
@@ -1264,8 +1329,8 @@ export function PegShieldDashboard() {
                   ? "Connect a CC3 wallet to simulate a claim"
                   : !hasLivePolicy
                     ? "Select a live policy before loading a proof"
-                    : !claimArtifact
-                      ? `Load a normalized ${claimStage} proof artifact`
+                    : !firstClaimArtifact || !confirmationClaimArtifact
+                      ? "Load both normalized proof artifacts"
                       : claimStatus === "validating"
                         ? "Validating artifact checksum…"
                         : claimSimulationPending
@@ -1292,7 +1357,7 @@ export function PegShieldDashboard() {
               >
                 {claimStatus === "submitting"
                   ? "Submitting…"
-                  : `Submit ${claimStage} proof`}
+                  : "Submit atomic claim"}
               </button>
             </div>
             {claimStatus === "confirmed" && claimWriter.data && (

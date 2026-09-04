@@ -131,23 +131,14 @@ export const POOL_WRITE_ABI = [
 export const CLAIM_WRITE_ABI = [
   {
     type: "function",
-    name: "submitBreachProof",
+    name: "submitClaim",
     stateMutability: "nonpayable",
     inputs: [
       { name: "policyId", type: "uint256" },
-      { name: "encodedProof", type: "bytes" },
-      { name: "receiptLogPosition", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "submitConfirmationProof",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "policyId", type: "uint256" },
-      { name: "encodedProof", type: "bytes" },
-      { name: "receiptLogPosition", type: "uint256" },
+      { name: "firstEncodedProof", type: "bytes" },
+      { name: "firstReceiptLogPosition", type: "uint256" },
+      { name: "confirmationEncodedProof", type: "bytes" },
+      { name: "confirmationReceiptLogPosition", type: "uint256" },
     ],
     outputs: [],
   },

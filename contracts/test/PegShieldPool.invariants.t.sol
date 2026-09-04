@@ -68,7 +68,7 @@ contract PegShieldPoolInvariantsTest is StdInvariant, Test {
             aggregator: address(0x1234),
             feedDecimals: 8,
             triggerBelow: 99_000_000,
-            activationDelay: 1,
+            activationDelay: 5 minutes,
             policyDuration: 100,
             claimGracePeriod: 50,
             minBreachDuration: 1,

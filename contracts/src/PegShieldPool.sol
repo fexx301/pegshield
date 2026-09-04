@@ -26,7 +26,6 @@ import {
     CoverageAboveProductMaximum,
     TimestampOverflow,
     PolicyNotActive,
-    PolicyNotBreached,
     PolicyNotExpirable,
     ClaimSubmissionClosed,
     WrongSourceChain,
@@ -43,8 +42,7 @@ import {
 } from "./PegShieldTypes.sol";
 
 /// @title PegShieldPool
-/// @notice Accounted TestUSD capital and underwriter-defined insurance products.
-/// @dev Claim verification and payout transitions are added in later packets.
+/// @notice Accounted TestUSD capital and underwriter-defined depeg-cover products.
 /// The verifier address is immutable from deployment so an underwriter cannot
 /// swap the proof boundary underneath policies that already exist.
 contract PegShieldPool is AccessControl, ReentrancyGuard {
@@ -53,7 +51,8 @@ contract PegShieldPool is AccessControl, ReentrancyGuard {
     bytes32 public constant UNDERWRITER_ROLE = keccak256("UNDERWRITER_ROLE");
     uint256 public constant REGISTERED_SOURCE_CHAIN_KEY = 3;
     uint8 public constant REGISTERED_FEED_DECIMALS = 8;
-    uint32 public constant MAX_PREMIUM_BPS = 10_000;
+    uint64 public constant MIN_ACTIVATION_DELAY = 5 minutes;
+    uint32 public constant MAX_PREMIUM_BPS = 9_999;
 
     IERC20 public immutable payoutToken;
     address public immutable verifierAdapter;
@@ -190,11 +189,15 @@ contract PegShieldPool is AccessControl, ReentrancyGuard {
         );
     }
 
-    /// @notice Verifies and records the first in-window price breach.
-    function submitBreachProof(
+    /// @notice Atomically verifies two ordered in-window breaches and pays the beneficiary.
+    /// @dev Verifying both observations in one transaction prevents a permissionless
+    /// relayer from griefing a policy by pinning an unusably late first observation.
+    function submitClaim(
         uint256 policyId,
-        bytes calldata encodedProof,
-        uint256 receiptLogPosition
+        bytes calldata firstEncodedProof,
+        uint256 firstReceiptLogPosition,
+        bytes calldata confirmationEncodedProof,
+        uint256 confirmationReceiptLogPosition
     ) external nonReentrant {
         Policy storage policy = _policyStorage(policyId);
         if (policy.state != PolicyState.Active) {
@@ -203,68 +206,45 @@ contract PegShieldPool is AccessControl, ReentrancyGuard {
         Product storage product = _productStorage(policy.productId);
         _requireSubmissionOpen(policy, product);
 
-        OracleObservation memory observation =
-            _verifyObservation(policy, product, encodedProof, receiptLogPosition);
-        if (eventConsumedByPolicy[policyId][observation.eventId]) {
-            revert EventAlreadyConsumed(observation.eventId);
-        }
-
-        eventConsumedByPolicy[policyId][observation.eventId] = true;
-        policy.firstBreachAt = _toUint64(observation.updatedAt);
-        policy.firstRoundId = observation.roundId;
-        policy.firstEventId = observation.eventId;
-        policy.state = PolicyState.BreachObserved;
-
-        emit BreachObserved(
-            policyId,
-            observation.eventId,
-            observation.roundId,
-            observation.answer,
-            observation.updatedAt
+        OracleObservation memory first =
+            _verifyObservation(policy, product, firstEncodedProof, firstReceiptLogPosition);
+        OracleObservation memory confirmation = _verifyObservation(
+            policy, product, confirmationEncodedProof, confirmationReceiptLogPosition
         );
-    }
-
-    /// @notice Verifies a later in-window breach and pays the immutable beneficiary.
-    function submitConfirmationProof(
-        uint256 policyId,
-        bytes calldata encodedProof,
-        uint256 receiptLogPosition
-    ) external nonReentrant {
-        Policy storage policy = _policyStorage(policyId);
-        if (policy.state != PolicyState.BreachObserved) {
-            revert PolicyNotBreached(policyId, uint8(policy.state));
+        if (eventConsumedByPolicy[policyId][first.eventId]) {
+            revert EventAlreadyConsumed(first.eventId);
         }
-        Product storage product = _productStorage(policy.productId);
-        _requireSubmissionOpen(policy, product);
-
-        OracleObservation memory observation =
-            _verifyObservation(policy, product, encodedProof, receiptLogPosition);
         if (
-            observation.eventId == policy.firstEventId || observation.roundId <= policy.firstRoundId
-                || observation.updatedAt <= policy.firstBreachAt
+            confirmation.eventId == first.eventId || confirmation.roundId <= first.roundId
+                || confirmation.updatedAt <= first.updatedAt
         ) {
             revert ConfirmationEventNotLater();
         }
-        uint256 requiredAt = uint256(policy.firstBreachAt) + product.minBreachDuration;
-        if (observation.updatedAt < requiredAt) {
-            revert BreachDurationNotMet(observation.updatedAt, requiredAt);
+        uint256 requiredAt = first.updatedAt + product.minBreachDuration;
+        if (confirmation.updatedAt < requiredAt) {
+            revert BreachDurationNotMet(confirmation.updatedAt, requiredAt);
         }
-        if (eventConsumedByPolicy[policyId][observation.eventId]) {
-            revert EventAlreadyConsumed(observation.eventId);
+        if (eventConsumedByPolicy[policyId][confirmation.eventId]) {
+            revert EventAlreadyConsumed(confirmation.eventId);
         }
 
-        eventConsumedByPolicy[policyId][observation.eventId] = true;
+        eventConsumedByPolicy[policyId][first.eventId] = true;
+        eventConsumedByPolicy[policyId][confirmation.eventId] = true;
+        policy.firstBreachAt = _toUint64(first.updatedAt);
+        policy.firstRoundId = first.roundId;
+        policy.firstEventId = first.eventId;
         policy.state = PolicyState.Claimed;
         reservedCapital -= policy.coverage;
         accountedCapital -= policy.coverage;
         _pushExact(policy.beneficiary, policy.coverage);
 
+        emit BreachObserved(policyId, first.eventId, first.roundId, first.answer, first.updatedAt);
         emit ConfirmationObserved(
             policyId,
-            observation.eventId,
-            observation.roundId,
-            observation.answer,
-            observation.updatedAt
+            confirmation.eventId,
+            confirmation.roundId,
+            confirmation.answer,
+            confirmation.updatedAt
         );
         emit PolicyPaid(policyId, policy.beneficiary, policy.coverage);
     }
@@ -398,7 +378,7 @@ contract PegShieldPool is AccessControl, ReentrancyGuard {
         if (
             config.chainKey != REGISTERED_SOURCE_CHAIN_KEY || config.aggregator == address(0)
                 || config.feedDecimals != REGISTERED_FEED_DECIMALS || config.triggerBelow <= 0
-                || config.activationDelay == 0 || config.policyDuration == 0
+                || config.activationDelay < MIN_ACTIVATION_DELAY || config.policyDuration == 0
                 || config.claimGracePeriod == 0 || config.minBreachDuration == 0
                 || config.minBreachDuration >= config.policyDuration || config.premiumBps == 0
                 || config.premiumBps > MAX_PREMIUM_BPS || config.maxCoveragePerPolicy == 0

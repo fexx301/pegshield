@@ -76,7 +76,6 @@ error CoverageAboveProductMaximum(uint256 coverage, uint256 maximum);
 error InsufficientFreeCapital(uint256 requested, uint256 available);
 error UnexpectedTokenBalanceDelta(uint256 expected, uint256 actual);
 error PolicyNotActive(uint256 policyId, uint8 state);
-error PolicyNotBreached(uint256 policyId, uint8 state);
 error PolicyNotExpirable(uint256 policyId, uint8 state);
 error ClaimSubmissionClosed(uint256 nowTimestamp, uint256 deadline);
 error WrongSourceChain(uint256 expected, uint256 actual);

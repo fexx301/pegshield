@@ -138,6 +138,8 @@ contract MockEvmV1Decoder is IEvmV1Decoder {
 /// authenticated envelope; no production contract imports this mock.
 contract MockPegShieldVerifier is IPegShieldVerifier {
     VerifiedSourceLog private source;
+    mapping(bytes32 proofHash => VerifiedSourceLog keyedSource) private keyedSources;
+    mapping(bytes32 proofHash => bool configured) private keyedSourceConfigured;
 
     function setSource(
         uint256 chainKey,
@@ -160,11 +162,38 @@ contract MockPegShieldVerifier is IPegShieldVerifier {
         source.receiptSucceeded = receiptSucceeded;
     }
 
-    function verifySourceLog(bytes calldata, uint256)
+    function setSourceForProof(
+        bytes calldata encodedProof,
+        uint256 chainKey,
+        bytes32 attestedTransactionDigest,
+        uint256 receiptLogPosition,
+        address emitter,
+        bytes32[] calldata topics,
+        bytes calldata data,
+        bool receiptSucceeded
+    ) external {
+        bytes32 proofHash = keccak256(encodedProof);
+        VerifiedSourceLog storage keyed = keyedSources[proofHash];
+        keyed.chainKey = chainKey;
+        keyed.attestedTransactionDigest = attestedTransactionDigest;
+        keyed.receiptLogPosition = receiptLogPosition;
+        keyed.emitter = emitter;
+        delete keyed.topics;
+        for (uint256 i; i < topics.length; ++i) {
+            keyed.topics.push(topics[i]);
+        }
+        keyed.data = data;
+        keyed.receiptSucceeded = receiptSucceeded;
+        keyedSourceConfigured[proofHash] = true;
+    }
+
+    function verifySourceLog(bytes calldata encodedProof, uint256)
         external
         view
         returns (VerifiedSourceLog memory)
     {
+        bytes32 proofHash = keccak256(encodedProof);
+        if (keyedSourceConfigured[proofHash]) return keyedSources[proofHash];
         return source;
     }
 }

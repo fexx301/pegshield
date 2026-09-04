@@ -131,15 +131,9 @@ const poolExpected = [
 
 const claimExpected = [
   {
-    signature: "submitBreachProof(uint256,bytes,uint256)",
+    signature: "submitClaim(uint256,bytes,uint256,bytes,uint256)",
     stateMutability: "nonpayable",
-    inputs: [uint256, tuple("bytes"), uint256],
-    outputs: [],
-  },
-  {
-    signature: "submitConfirmationProof(uint256,bytes,uint256)",
-    stateMutability: "nonpayable",
-    inputs: [uint256, tuple("bytes"), uint256],
+    inputs: [uint256, tuple("bytes"), uint256, tuple("bytes"), uint256],
     outputs: [],
   },
 ];

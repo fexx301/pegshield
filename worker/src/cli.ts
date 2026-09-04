@@ -119,18 +119,21 @@ async function execute(argv: string[], repoRoot: string): Promise<JsonResult> {
 
   if (group === "proof" && command === "simulate") {
     const policyId = parsePolicyId(requiredFlag(argv, "--policy"));
-    const stage = requiredFlag(argv, "--stage");
-    const artifact = await readClaimArtifact(requiredFlag(argv, "--file"));
+    const firstArtifact = await readClaimArtifact(
+      requiredFlag(argv, "--first-file"),
+    );
+    const confirmationArtifact = await readClaimArtifact(
+      requiredFlag(argv, "--confirmation-file"),
+    );
     try {
       const result = await simulateClaim({
         repoRoot,
-        stage,
         policyId,
-        artifact,
+        firstArtifact,
+        confirmationArtifact,
       });
       return {
         ok: true,
-        stage,
         policyId: policyId.toString(),
         pool: result.poolAddress,
         calldataBytes: (result.call.data.length - 2) / 2,
@@ -151,18 +154,21 @@ async function execute(argv: string[], repoRoot: string): Promise<JsonResult> {
 
   if (group === "proof" && command === "submit") {
     const policyId = parsePolicyId(requiredFlag(argv, "--policy"));
-    const stage = requiredFlag(argv, "--stage");
-    const artifact = await readClaimArtifact(requiredFlag(argv, "--file"));
+    const firstArtifact = await readClaimArtifact(
+      requiredFlag(argv, "--first-file"),
+    );
+    const confirmationArtifact = await readClaimArtifact(
+      requiredFlag(argv, "--confirmation-file"),
+    );
     try {
       const result = await submitClaim({
         repoRoot,
-        stage,
         policyId,
-        artifact,
+        firstArtifact,
+        confirmationArtifact,
       });
       return {
         ok: true,
-        stage,
         policyId: policyId.toString(),
         pool: result.poolAddress,
         relayer: result.relayer,

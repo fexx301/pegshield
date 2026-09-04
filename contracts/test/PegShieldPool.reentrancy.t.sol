@@ -33,7 +33,7 @@ contract PegShieldPoolReentrancyTest is Test {
         token.approve(address(pool), type(uint256).max);
         vm.prank(funder);
         token.approve(address(pool), type(uint256).max);
-        vm.warp(1_000_000);
+        vm.warp(999_710);
         vm.prank(underwriter);
         productId = pool.createProduct(_validProduct());
         vm.prank(funder);
@@ -48,7 +48,7 @@ contract PegShieldPoolReentrancyTest is Test {
             aggregator: EMITTER,
             feedDecimals: 8,
             triggerBelow: 100_000_000,
-            activationDelay: 10,
+            activationDelay: 5 minutes,
             policyDuration: 100,
             claimGracePeriod: 50,
             minBreachDuration: 20,
@@ -58,27 +58,32 @@ contract PegShieldPoolReentrancyTest is Test {
         });
     }
 
-    function _setSource(bytes32 digest, uint256 updatedAt, uint256 roundId) internal {
+    function _setSource(bytes memory proof, bytes32 digest, uint256 updatedAt, uint256 roundId)
+        internal
+    {
         bytes32[] memory topics = new bytes32[](3);
         topics[0] = TOPIC0;
         topics[1] = bytes32(uint256(99_000_000));
         topics[2] = bytes32(roundId);
-        verifier.setSource(3, digest, 0, EMITTER, topics, abi.encode(updatedAt), true);
+        verifier.setSourceForProof(
+            proof, 3, digest, 0, EMITTER, topics, abi.encode(updatedAt), true
+        );
     }
 
     function test_payoutBlocksTokenCallbackAndPaysOnce() public {
-        _setSource(bytes32(uint256(1)), 1_000_020, 10);
-        pool.submitBreachProof(1, hex"01", 0);
+        _setSource(hex"01", bytes32(uint256(1)), 1_000_020, 10);
         vm.warp(1_000_050);
-        _setSource(bytes32(uint256(2)), 1_000_045, 11);
+        _setSource(hex"02", bytes32(uint256(2)), 1_000_045, 11);
 
         token.configureCallback(
             address(pool),
-            abi.encodeCall(PegShieldPool.submitConfirmationProof, (1, hex"01", uint256(0))),
+            abi.encodeCall(
+                PegShieldPool.submitClaim, (1, hex"01", uint256(0), hex"02", uint256(0))
+            ),
             true
         );
         vm.prank(relayer);
-        pool.submitConfirmationProof(1, hex"01", 0);
+        pool.submitClaim(1, hex"01", 0, hex"02", 0);
 
         assertTrue(token.callbackAttempted());
         assertFalse(token.callbackSucceeded());

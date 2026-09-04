@@ -1,10 +1,11 @@
 # PegShield
 
 PegShield is an evidence-first parametric USDC depeg protection prototype for
-Creditcoin CC3 testnet. A permissionless relayer submits an Attestcoin proof of
-an Ethereum `AnswerUpdated` receipt; the CC3 pool checks the source chronology,
-threshold, replay status, and reserve accounting before paying a fixed amount
-of demo TestUSD to the beneficiary stored at purchase.
+Creditcoin CC3 testnet. A permissionless relayer submits two Attestcoin proofs
+of Ethereum `AnswerUpdated` receipts in one atomic claim; the CC3 pool checks
+their source chronology, threshold, replay status, and reserve accounting
+before paying a fixed amount of demo TestUSD to the beneficiary stored at
+purchase.
 
 This is a hackathon prototype, not insurance or a production stablecoin.
 `TestUSD` is intentionally a six-decimal demo token. Never send production
@@ -19,10 +20,10 @@ gets a policy whose terms are locked at purchase.
 
 If the pinned Ethereum USDC/USD aggregator emits two qualifying
 below-threshold `AnswerUpdated` events after activation, Attestcoin proves the
-exact Ethereum receipts. A permissionless relayer submits those proofs, but
-the CC3 contract makes the decision: it checks the aggregator, event topic,
-receipt success, threshold, chronology, timing, replay status, and reserve
-capacity. Once the second proof passes, the pool pays the exact coverage to the
+exact Ethereum receipts. A permissionless relayer submits both proofs in one
+transaction, but the CC3 contract makes the decision: it checks the aggregator,
+event topic, receipt success, threshold, chronology, timing, replay status, and
+reserve capacity. Once the pair passes, the pool pays the exact coverage to the
 beneficiary stored in the policy, marks it `Claimed`, and blocks replay.
 
 In one sentence: **buy fixed coverage, prove the depeg twice, and let CC3 pay
@@ -39,14 +40,16 @@ The offline protocol core is implemented and reproducible:
 - `AttestcoinVerifierAdapter` calls the official proof boundary and exposes
   only an authenticated receipt log.
 - `PegShieldPool` has exact token-delta accounting, immutable product/policy
-  terms, two-stage observation state transitions, expiry, replay protection,
-  and effects-before-transfer payout ordering.
+  terms, atomic two-proof settlement, expiry, replay protection, and
+  effects-before-transfer payout ordering. Atomic settlement prevents a
+  permissionless relayer from pinning an unusably late first observation.
 - 62 Foundry tests pass, including 256-run invariant properties and an ERC20
   callback/reentrancy test. The worker has 21 deterministic tests covering
   artifact integrity, exact event filtering, bounded proof-service behavior,
   and CC3 claim calldata. The web build and local Playwright smoke test pass.
 - The CC3 deployment is live on testnet and recorded in the validated
-  [`deployments/cc3-testnet.json`](deployments/cc3-testnet.json) manifest.
+  `deployments/cc3-testnet-v3.json` manifest. The preserved v1/v2 manifests
+  remain available as historical deployment evidence.
   Funded credentials remain local and ignored. The web dashboard reads the
   deployed pool when `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` is configured. It
   now exposes wallet-gated exact-premium purchase and verified-proof claim
@@ -64,12 +67,12 @@ PegShield is deployed on Creditcoin CC3 testnet (chain ID `102031`). The public
 links below are safe to share with reviewers:
 
 - [Open the live dashboard](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2)
-- [PegShield pool on CC3](https://creditcoin-testnet.blockscout.com/address/0x2ff714381565d636b50cc0b8d79930c225f311ea)
-- [TestUSD token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa1049af6f8c324ab14f06b693cb711f98d6a36ef)
-- [Attestcoin verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x11e9cb6cc5aca71789cf1ffaf73fbef971f2e9fa)
-- [Policy 2 purchase](https://creditcoin-testnet.blockscout.com/tx/0xf290b4c7719e469022e090a9ebc6954c7dd50fc3f55e089af918b4b076b538fc)
-- [Breach observation](https://creditcoin-testnet.blockscout.com/tx/0xbf43319f0b2adcc95a1c629bb076f588fb884a19b43fc5342d1ba6d7ac5dbaa4)
-- [Confirmation and payout](https://creditcoin-testnet.blockscout.com/tx/0x96039de10e844504a847b8f1c1a99e71e58de03b6dd27284d268e9497054e770)
+- [PegShield v3 pool on CC3](https://creditcoin-testnet.blockscout.com/address/0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b)
+- [TestUSD v3 token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
+- [Attestcoin v3 verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
+- [V3 policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe)
+- [Prior live breach observation](https://creditcoin-testnet.blockscout.com/tx/0xbf43319f0b2adcc95a1c629bb076f588fb884a19b43fc5342d1ba6d7ac5dbaa4)
+- [Prior live confirmation and payout](https://creditcoin-testnet.blockscout.com/tx/0x96039de10e844504a847b8f1c1a99e71e58de03b6dd27284d268e9497054e770)
 - [Ethereum source event, round 1169](https://etherscan.io/tx/0xb9f980da1350fbb2350fe6b6bdbc3fba3717c556662e3b6b275b495f84ca6eb0)
 - [Ethereum source event, round 1170](https://etherscan.io/tx/0x5adcdf88fe55221c6e23d1aad108bf1e75120b0165792a0ed12146159a95cb43)
 
@@ -125,9 +128,9 @@ node worker/dist/cli.js config validate
 node worker/dist/cli.js proof inspect --file worker/fixtures/historical-proof.json
 node worker/dist/cli.js proof encode --file worker/fixtures/historical-proof.json --out /tmp/pegshield-proof.hex
 node worker/dist/cli.js events scan --from-block <start> --to-block <end> --trigger-below <feed-units>
-node worker/dist/cli.js proof simulate --policy <id> --stage breach --file proofs/<event>.json
+node worker/dist/cli.js proof simulate --policy <id> --first-file proofs/<first>.json --confirmation-file proofs/<later>.json
 # proof submit is permissionless but requires a locally configured relayer key:
-node worker/dist/cli.js proof submit --policy <id> --stage breach --file proofs/<event>.json
+node worker/dist/cli.js proof submit --policy <id> --first-file proofs/<first>.json --confirmation-file proofs/<later>.json
 pnpm --filter @pegshield/web build
 pnpm preflight:deployment
 pnpm demo:trigger -- --margin-bps 100
@@ -136,7 +139,7 @@ pnpm demo:trigger -- --margin-bps 100
 ### Getting demo TestUSD
 
 TestUSD is the deployment’s six-decimal, testnet-only ERC-20 at
-`0xa1049Af6F8c324AB14f06b693CB711f98D6a36eF`. It has no public faucet: only
+`0xA82e7ED8a10DA85d64E3C41D0fFbE5B95E1B30F9`. It has no public faucet: only
 the explicitly authorized `MINTER_ROLE` operator can mint it. For a browser
 rehearsal, add that contract to the wallet with symbol `tUSD` and six decimals,
 then have the demo operator mint or transfer at least the quoted premium to the

@@ -39,7 +39,7 @@ contract PegShieldPoolExpiryTest is Test {
         token.approve(address(pool), type(uint256).max);
         vm.prank(funder);
         token.approve(address(pool), type(uint256).max);
-        vm.warp(1_000_000);
+        vm.warp(999_710);
         vm.prank(underwriter);
         productId = pool.createProduct(_validProduct());
         vm.prank(funder);
@@ -52,7 +52,7 @@ contract PegShieldPoolExpiryTest is Test {
             aggregator: EMITTER,
             feedDecimals: 8,
             triggerBelow: 100_000_000,
-            activationDelay: 10,
+            activationDelay: 5 minutes,
             policyDuration: 100,
             claimGracePeriod: 50,
             minBreachDuration: 20,
@@ -67,12 +67,16 @@ contract PegShieldPoolExpiryTest is Test {
         policyId = pool.buyPolicy(productId, 100e6, beneficiary);
     }
 
-    function _setBreach(bytes32 digest, uint256 updatedAt, uint256 roundId) internal {
+    function _setBreach(bytes memory proof, bytes32 digest, uint256 updatedAt, uint256 roundId)
+        internal
+    {
         bytes32[] memory topics = new bytes32[](3);
         topics[0] = TOPIC0;
         topics[1] = bytes32(uint256(99_000_000));
         topics[2] = bytes32(roundId);
-        verifier.setSource(3, digest, 0, EMITTER, topics, abi.encode(updatedAt), true);
+        verifier.setSourceForProof(
+            proof, 3, digest, 0, EMITTER, topics, abi.encode(updatedAt), true
+        );
     }
 
     function test_expireActiveReleasesReserveButNotAccountedCapital() public {
@@ -89,16 +93,6 @@ contract PegShieldPoolExpiryTest is Test {
         assertEq(pool.accountedCapital(), accounted);
     }
 
-    function test_expireBreachObservedReleasesReserve() public {
-        uint256 policyId = _buy();
-        _setBreach(bytes32(uint256(1)), 1_000_020, 10);
-        pool.submitBreachProof(policyId, hex"01", 0);
-        vm.warp(1_000_161);
-        pool.expirePolicy(policyId);
-        assertEq(uint8(pool.getPolicy(policyId).state), uint8(PolicyState.Expired));
-        assertEq(pool.reservedCapital(), 0);
-    }
-
     function test_expiryIsOneWayAndTerminalPoliciesCannotExpire() public {
         uint256 expiredPolicy = _buy();
         vm.warp(1_000_161);
@@ -110,13 +104,12 @@ contract PegShieldPoolExpiryTest is Test {
         );
         pool.expirePolicy(expiredPolicy);
 
-        vm.warp(1_000_000);
+        vm.warp(999_710);
         uint256 claimedPolicy = _buy();
-        _setBreach(bytes32(uint256(2)), 1_000_020, 10);
-        pool.submitBreachProof(claimedPolicy, hex"01", 0);
+        _setBreach(hex"01", bytes32(uint256(2)), 1_000_020, 10);
         vm.warp(1_000_050);
-        _setBreach(bytes32(uint256(3)), 1_000_045, 11);
-        pool.submitConfirmationProof(claimedPolicy, hex"01", 0);
+        _setBreach(hex"02", bytes32(uint256(3)), 1_000_045, 11);
+        pool.submitClaim(claimedPolicy, hex"01", 0, hex"02", 0);
         vm.warp(1_000_161);
         vm.expectRevert(
             abi.encodeWithSelector(

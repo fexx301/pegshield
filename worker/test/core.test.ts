@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildClaimCall,
   claimArtifactDigest,
-  claimFunctionName,
   parsePolicyId,
 } from "../src/cc3Client.js";
 import { loadConfig } from "../src/config.js";
@@ -126,21 +125,14 @@ describe("typed proof core", () => {
     );
   });
 
-  it("builds exact stage-specific CC3 claim calldata without trusting decoded facts", async () => {
+  it("builds exact atomic two-proof claim calldata without trusting decoded facts", async () => {
     const artifact = await fixture();
-    const breach = buildClaimCall("breach", parsePolicyId("7"), artifact);
-    const confirmation = buildClaimCall(
-      "confirmation",
-      parsePolicyId("7"),
-      artifact,
-    );
-    expect(breach.functionName).toBe("submitBreachProof");
-    expect(confirmation.functionName).toBe("submitConfirmationProof");
-    expect(breach.receiptLogPosition).toBe(2n);
-    expect(breach.encodedProof.length).toBeGreaterThan(2);
-    expect(claimArtifactDigest(breach)).not.toBe(
-      claimArtifactDigest(confirmation),
-    );
-    expect(() => claimFunctionName("other")).toThrow(/breach or confirmation/);
+    const claim = buildClaimCall(parsePolicyId("7"), artifact, artifact);
+    expect(claim.functionName).toBe("submitClaim");
+    expect(claim.firstReceiptLogPosition).toBe(2n);
+    expect(claim.confirmationReceiptLogPosition).toBe(2n);
+    expect(claim.firstEncodedProof.length).toBeGreaterThan(2);
+    expect(claim.confirmationEncodedProof.length).toBeGreaterThan(2);
+    expect(claimArtifactDigest(claim)).toMatch(/^0x[0-9a-f]{64}$/);
   });
 });

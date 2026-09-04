@@ -195,7 +195,7 @@ contract PegShieldPoolAccountingTest is Test {
         product.policyDuration = 0;
         _expectInvalidProduct(product);
         product = _validProduct();
-        product.activationDelay = 0;
+        product.activationDelay = 5 minutes - 1;
         _expectInvalidProduct(product);
         product = _validProduct();
         product.claimGracePeriod = 0;
@@ -210,7 +210,7 @@ contract PegShieldPoolAccountingTest is Test {
         product.premiumBps = 0;
         _expectInvalidProduct(product);
         product = _validProduct();
-        product.premiumBps = 10_001;
+        product.premiumBps = 10_000;
         _expectInvalidProduct(product);
         product = _validProduct();
         product.maxCoveragePerPolicy = 0;

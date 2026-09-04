@@ -34,30 +34,18 @@ export const CC3_CHAIN: Chain = {
 export const CLAIM_ABI = [
   {
     type: "function",
-    name: "submitBreachProof",
+    name: "submitClaim",
     stateMutability: "nonpayable",
     inputs: [
       { name: "policyId", type: "uint256" },
-      { name: "encodedProof", type: "bytes" },
-      { name: "receiptLogPosition", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "submitConfirmationProof",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "policyId", type: "uint256" },
-      { name: "encodedProof", type: "bytes" },
-      { name: "receiptLogPosition", type: "uint256" },
+      { name: "firstEncodedProof", type: "bytes" },
+      { name: "firstReceiptLogPosition", type: "uint256" },
+      { name: "confirmationEncodedProof", type: "bytes" },
+      { name: "confirmationReceiptLogPosition", type: "uint256" },
     ],
     outputs: [],
   },
 ] as const;
-
-type ClaimStage = "breach" | "confirmation";
-type ClaimFunctionName = "submitBreachProof" | "submitConfirmationProof";
 
 type DeploymentManifest = {
   network?: { chainId?: number };
@@ -67,21 +55,14 @@ type DeploymentManifest = {
 };
 
 type ClaimCall = {
-  functionName: ClaimFunctionName;
+  functionName: "submitClaim";
   policyId: bigint;
-  encodedProof: Hex;
-  receiptLogPosition: bigint;
+  firstEncodedProof: Hex;
+  firstReceiptLogPosition: bigint;
+  confirmationEncodedProof: Hex;
+  confirmationReceiptLogPosition: bigint;
   data: Hex;
 };
-
-export function claimFunctionName(stage: string): ClaimFunctionName {
-  if (stage === "breach") return "submitBreachProof";
-  if (stage === "confirmation") return "submitConfirmationProof";
-  throw new WorkerError(
-    "CONFIG_INVALID",
-    "stage must be either breach or confirmation",
-  );
-}
 
 export function parsePolicyId(value: string): bigint {
   if (!/^[1-9][0-9]*$/.test(value)) {
@@ -94,23 +75,41 @@ export function parsePolicyId(value: string): bigint {
 }
 
 export function buildClaimCall(
-  stage: string,
   policyId: bigint,
-  artifact: ProofArtifact,
+  firstArtifact: ProofArtifact,
+  confirmationArtifact: ProofArtifact,
 ): ClaimCall {
-  const functionName = claimFunctionName(stage);
-  const encodedProof = encodeAttestcoinProof(proofFromArtifact(artifact));
-  const receiptLogPosition = BigInt(artifact.source.receiptLogPosition);
+  const functionName = "submitClaim";
+  const firstEncodedProof = encodeAttestcoinProof(
+    proofFromArtifact(firstArtifact),
+  );
+  const firstReceiptLogPosition = BigInt(
+    firstArtifact.source.receiptLogPosition,
+  );
+  const confirmationEncodedProof = encodeAttestcoinProof(
+    proofFromArtifact(confirmationArtifact),
+  );
+  const confirmationReceiptLogPosition = BigInt(
+    confirmationArtifact.source.receiptLogPosition,
+  );
   const data = encodeFunctionData({
     abi: CLAIM_ABI,
     functionName,
-    args: [policyId, encodedProof, receiptLogPosition],
+    args: [
+      policyId,
+      firstEncodedProof,
+      firstReceiptLogPosition,
+      confirmationEncodedProof,
+      confirmationReceiptLogPosition,
+    ],
   });
   return {
     functionName,
     policyId,
-    encodedProof,
-    receiptLogPosition,
+    firstEncodedProof,
+    firstReceiptLogPosition,
+    confirmationEncodedProof,
+    confirmationReceiptLogPosition,
     data,
   };
 }
@@ -150,8 +149,10 @@ async function estimateClaimGas(options: {
     functionName: options.call.functionName,
     args: [
       options.call.policyId,
-      options.call.encodedProof,
-      options.call.receiptLogPosition,
+      options.call.firstEncodedProof,
+      options.call.firstReceiptLogPosition,
+      options.call.confirmationEncodedProof,
+      options.call.confirmationReceiptLogPosition,
     ],
     account: options.account,
   });
@@ -249,9 +250,9 @@ export async function assertPoolRuntime(
 
 export async function simulateClaim(options: {
   repoRoot: string;
-  stage: string;
   policyId: bigint;
-  artifact: ProofArtifact;
+  firstArtifact: ProofArtifact;
+  confirmationArtifact: ProofArtifact;
   from?: Address;
 }) {
   const poolAddress = resolvePoolAddress(options.repoRoot);
@@ -264,15 +265,21 @@ export async function simulateClaim(options: {
   }
   await assertPoolRuntime(client, options.repoRoot, poolAddress);
   const call = buildClaimCall(
-    options.stage,
     options.policyId,
-    options.artifact,
+    options.firstArtifact,
+    options.confirmationArtifact,
   );
   const result = await client.simulateContract({
     address: poolAddress,
     abi: CLAIM_ABI,
     functionName: call.functionName,
-    args: [call.policyId, call.encodedProof, call.receiptLogPosition],
+    args: [
+      call.policyId,
+      call.firstEncodedProof,
+      call.firstReceiptLogPosition,
+      call.confirmationEncodedProof,
+      call.confirmationReceiptLogPosition,
+    ],
     account: options.from,
   });
   const config = loadConfig();
@@ -332,9 +339,9 @@ function configuredAccount(): Account {
 
 export async function submitClaim(options: {
   repoRoot: string;
-  stage: string;
   policyId: bigint;
-  artifact: ProofArtifact;
+  firstArtifact: ProofArtifact;
+  confirmationArtifact: ProofArtifact;
 }) {
   const account = configuredAccount();
   const poolAddress = resolvePoolAddress(options.repoRoot);
@@ -355,15 +362,21 @@ export async function submitClaim(options: {
   }
   await assertPoolRuntime(publicClient, options.repoRoot, poolAddress);
   const call = buildClaimCall(
-    options.stage,
     options.policyId,
-    options.artifact,
+    options.firstArtifact,
+    options.confirmationArtifact,
   );
   const simulation = await publicClient.simulateContract({
     address: poolAddress,
     abi: CLAIM_ABI,
     functionName: call.functionName,
-    args: [call.policyId, call.encodedProof, call.receiptLogPosition],
+    args: [
+      call.policyId,
+      call.firstEncodedProof,
+      call.firstReceiptLogPosition,
+      call.confirmationEncodedProof,
+      call.confirmationReceiptLogPosition,
+    ],
     account,
   });
   const gasEstimate =
@@ -407,4 +420,4 @@ export async function submitClaim(options: {
   };
 }
 
-export type { ClaimCall, ClaimStage };
+export type { ClaimCall };
