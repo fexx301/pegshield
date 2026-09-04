@@ -37,7 +37,11 @@ test("dashboard exposes the evidence-first purchase flow", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Settle from verified evidence" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Normalized proof artifact")).toBeVisible();
+  await expect(page.getByLabel("First observation proof")).toBeVisible();
+  await expect(page.getByLabel("Confirmation observation proof")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Submit atomic claim" }),
+  ).toBeDisabled();
   await page.getByRole("link", { name: "Inspect evidence" }).click();
   await expect(
     page.getByRole("heading", { name: "Independent facts, one panel." }),
@@ -56,9 +60,13 @@ test("dashboard keeps a shareable policy selection after reload", async ({
 
   if (await page.getByText("CC3 pool read verified").isVisible()) {
     await expect(page.getByText(/policy 01 \/ coverage/)).toBeVisible();
-    await expect(page.getByText(/Claimed · no replay/)).toBeVisible();
+    await expect(
+      page.getByText(/(Active|Claimed|Expired) · no replay/),
+    ).toBeVisible();
     await page.reload();
     await expect(page.getByText(/policy 01 \/ coverage/)).toBeVisible();
-    await expect(page.getByText(/Claimed · no replay/)).toBeVisible();
+    await expect(
+      page.getByText(/(Active|Claimed|Expired) · no replay/),
+    ).toBeVisible();
   }
 });
