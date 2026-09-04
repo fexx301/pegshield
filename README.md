@@ -178,7 +178,10 @@ PegShield trusts the public CC3 verifier dependencies, Ethereum receipt data,
 and underwriter-deposited TestUSD. It does not trust a relayer, browser state,
 caller-selected beneficiary, or caller-supplied price/round/timestamp. The
 prototype intentionally omits governance, upgrades, cancellation, refunds,
-cross-chain payout assets, and production economic parameters. The live
+cross-chain payout assets, pull-payment recovery for a beneficiary that rejects
+the payout token, and production economic parameters. Its depeg predicate is
+exactly two qualifying observations at least the configured interval apart; it
+does not prove that no recovery occurred between those observations. The live
 deployment and browser E2E evidence are complete. Public explorer and frontend
 links are provided separately with the release submission.
 
