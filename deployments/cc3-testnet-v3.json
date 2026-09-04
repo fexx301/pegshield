@@ -1,0 +1,96 @@
+{
+  "$schema": "../docs/schemas/deployment.schema.json",
+  "schemaVersion": 1,
+  "network": {
+    "name": "creditcoin-cc3-testnet",
+    "chainId": 102031,
+    "rpcUrl": "https://rpc.cc3-testnet.creditcoin.network"
+  },
+  "source": {
+    "gitCommit": "6fe69ddbabd6fb00c76426fc0095bbeb9f6a33b4",
+    "solc": "0.8.28",
+    "optimizerRuns": 200,
+    "evmVersion": "london"
+  },
+  "accounts": {
+    "deployer": "0x139BF8FCB6BCd2Fa169488Ace6a302cc1CA68B29",
+    "underwriter": "0xc8b887bd108c859291d590D4f89D1B569F8EDC62",
+    "treasury": "0x139BF8FCB6BCd2Fa169488Ace6a302cc1CA68B29",
+    "policyholder": "0x3dFF45B4abECe2a5Fafce69A9eF19612F78f334c"
+  },
+  "roles": {
+    "defaultAdmin": "0xc8b887bd108c859291d590D4f89D1B569F8EDC62",
+    "underwriter": "0xc8b887bd108c859291d590D4f89D1B569F8EDC62"
+  },
+  "dependencies": {
+    "blockProver": {
+      "address": "0x0000000000000000000000000000000000000FD2",
+      "codeHash": null,
+      "precompile": true
+    },
+    "chainInfo": {
+      "address": "0x0000000000000000000000000000000000000fd3",
+      "codeHash": null,
+      "precompile": true
+    },
+    "decoder": {
+      "address": "0x731c345d79Fb8BbDC541f9DF3b6317585F849F9f",
+      "codeHash": "0xb549c9d8eaf7d361192f8e363fe98717464441e2dd26e2b3bd1e0725df73a065",
+      "precompile": false
+    },
+    "sourceAggregator": {
+      "address": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+      "codeHash": "0x16f41184f797cb8f8918680df0ebf2a97cc3192aa6b104615f61096fc674f2aa",
+      "precompile": false
+    }
+  },
+  "contracts": {
+    "testUSD": {
+      "address": "0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9",
+      "txHash": "0x31a6b0cd867d62325a4ed30ee174fc1f29d87ce4fadea97612fed51e0436f4c0",
+      "blockNumber": 5427608,
+      "codeHash": "0x84be5f0969dfefc268d971ef2ae74cdb1cbfc16203451d8d9b01630e18dd12f3"
+    },
+    "adapter": {
+      "address": "0x9e1d5aec273802bde517bb55b3dec10b09e71dbf",
+      "txHash": "0x4f69d95e51ffaeed36abb4b245cefb6dfabf9085c8bf7342d6c6d3c24b287ed6",
+      "blockNumber": 5427609,
+      "codeHash": "0xfe5bb8de34cfedda4876b5fade5ffaced4433753c7e8dfe0ae8bf0b7dc074917"
+    },
+    "pool": {
+      "address": "0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b",
+      "txHash": "0xa12127d1933d8858eb82ce27eb3d6e9b0aff0c656b89c2f794172ec654ea572f",
+      "blockNumber": 5427610,
+      "codeHash": "0xe591b8d82971fa7fb5f501c5e684382ec68a9656a64d1584d3197a15ab87fb41"
+    }
+  },
+  "product": {
+    "id": "1",
+    "creationTxHash": "0x23d57a7d38a339d98b773c49b920444e6dfb35ed17bd6f09779aa97d7597622b",
+    "chainKey": "3",
+    "aggregator": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+    "feedDecimals": 8,
+    "triggerBelow": "100989675",
+    "activationDelay": 300,
+    "policyDuration": 604800,
+    "claimGracePeriod": 21600,
+    "minBreachDuration": 300,
+    "premiumBps": 250,
+    "maxCoveragePerPolicy": "500000000",
+    "demoOnly": true
+  },
+  "demoPolicy": {
+    "id": "1",
+    "purchaseTxHash": "0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe",
+    "purchaseBlockNumber": 5427630,
+    "holder": "0x3dFF45B4abECe2a5Fafce69A9eF19612F78f334c",
+    "beneficiary": "0x3dFF45B4abECe2a5Fafce69A9eF19612F78f334c",
+    "coverage": "100000000",
+    "premium": "2500000",
+    "purchasedAt": 1788504150,
+    "startsAt": 1788504450,
+    "endsAt": 1789109250,
+    "state": 0
+  },
+  "deployedAt": "2026-09-04T06:37:00.000Z"
+}

@@ -31,6 +31,12 @@ the locked beneficiary without a bridge or a hidden oracle.** The deployed
 threshold is an intentionally visible testnet/demo parameter, not a production
 insurance recommendation.
 
+Creditcoin is useful here because a lending market, credit protocol, or RWA
+vault on CC3 can name itself as the policy beneficiary. Ethereum supplies the
+widely used USDC/USD source event, Attestcoin proves it without a trusted
+operator, and CC3 settles protection directly where the credit application
+needs liquidity.
+
 ## Current status
 
 The offline protocol core is implemented and reproducible:
@@ -66,7 +72,7 @@ history.
 PegShield is deployed on Creditcoin CC3 testnet (chain ID `102031`). The public
 links below are safe to share with reviewers:
 
-- [Open the live dashboard](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2)
+- [Open the live dashboard](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1)
 - [PegShield v3 pool on CC3](https://creditcoin-testnet.blockscout.com/address/0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b)
 - [TestUSD v3 token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
 - [Attestcoin v3 verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)

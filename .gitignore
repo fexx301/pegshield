@@ -45,3 +45,4 @@ proofs/
 .DS_Store
 .idea/
 .vscode/
+.vercel

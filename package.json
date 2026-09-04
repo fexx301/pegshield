@@ -23,7 +23,7 @@
     "build": "pnpm --recursive build",
     "validate:discovery": "node scripts/validate-json.mjs docs/schemas/discovery-lock.schema.json docs/discovery-lock.json",
     "validate:proof": "node scripts/validate-json.mjs docs/schemas/proof-artifact.schema.json worker/fixtures/historical-proof.json",
-    "validate:deployments": "node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet.json && node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet-v2.json",
+    "validate:deployments": "node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet.json && node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet-v2.json && node scripts/validate-json.mjs docs/schemas/deployment.schema.json deployments/cc3-testnet-v3.json",
     "preflight:deployment": "node scripts/preflight-deployment.mjs",
     "demo:trigger": "node scripts/derive-demo-trigger.mjs",
     "deploy:manifest": "node scripts/generate-deployment-manifest.mjs",
