@@ -56,7 +56,10 @@ The offline protocol core is implemented and reproducible:
 - The CC3 deployment is live on testnet and recorded in the validated
   `deployments/cc3-testnet-v3.json` manifest. The preserved v1/v2 manifests
   remain available as historical deployment evidence.
-  Funded credentials remain local and ignored. The web dashboard reads the
+- Policy 1 completed the v3 atomic two-proof path on CC3: Ethereum rounds 1171
+  and 1172 were authenticated in one transaction and the pool transferred the
+  exact 100 tUSD coverage to the beneficiary locked at purchase.
+- Funded credentials remain local and ignored. The web dashboard reads the
   deployed pool when `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` is configured. It
   now exposes wallet-gated exact-premium purchase and verified-proof claim
   controls. Funded-wallet and claim-rehearsal evidence is kept in a separate
@@ -77,6 +80,9 @@ links below are safe to share with reviewers:
 - [TestUSD v3 token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
 - [Attestcoin v3 verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
 - [V3 policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe)
+- [V3 atomic claim and 100 tUSD payout](https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5)
+- [V3 Ethereum first observation, round 1171](https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32)
+- [V3 Ethereum confirmation, round 1172](https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9)
 - [Prior live breach observation](https://creditcoin-testnet.blockscout.com/tx/0xbf43319f0b2adcc95a1c629bb076f588fb884a19b43fc5342d1ba6d7ac5dbaa4)
 - [Prior live confirmation and payout](https://creditcoin-testnet.blockscout.com/tx/0x96039de10e844504a847b8f1c1a99e71e58de03b6dd27284d268e9497054e770)
 - [Ethereum source event, round 1169](https://etherscan.io/tx/0xb9f980da1350fbb2350fe6b6bdbc3fba3717c556662e3b6b275b495f84ca6eb0)
@@ -161,6 +167,9 @@ do not fill it in a commit. After deployment, `pnpm deploy:manifest` reads the
 broadcast receipts, verifies live roles/product/policy/code hashes, and writes
 the public manifest. Claim simulation and submission consume that manifest and
 the exact normalized proof artifact; no decoded price is accepted as input.
+Continuity proofs can age out as CC3's attestation/checkpoint window advances.
+Generate or batch-refresh both artifacts shortly before simulation; a locally
+cached JSON file is not evidence that its old continuity path remains valid.
 Use `pnpm demo:trigger -- --margin-bps 100` immediately before deployment to
 derive `DEMO_TRIGGER_BELOW` from the current signed source answer. The command
 prints a clearly labeled test-only threshold; review it and copy only the

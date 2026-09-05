@@ -1,6 +1,6 @@
 # P27 — Atomic-claim hardening and v3 deployment
 
-Status: **DEPLOYED — atomic claim code, setup, and first live proof verified; second live observation pending**
+Status: **PASS — atomic v3 claim and exact live payout confirmed**
 
 Fable's independent plan review identified a permissionless-relay griefing
 case in the original two-transaction state machine: a relayer could record a
@@ -77,10 +77,18 @@ At `2026-09-04T05:26:31Z`, the deployment preflight re-executed the committed
 proof generated at `2026-09-01T16:29:54Z`. CC3 BlockProver still returned true
 after approximately 61 hours while the decoder and Ethereum aggregator code
 hashes remained pinned. This exceeds the review's requested 24-hour check. It
-is evidence of current testnet behavior, not a guarantee that every future
-proof-verifier deployment has unlimited retention.
+is evidence of that checkpointed fixture's behavior, not a guarantee that
+every proof has unlimited retention.
 
-The remaining v3 protocol gate is the second distinct post-activation event
-at least 300 seconds after round 1171, followed by simulation and the live
-atomic payout. The earlier v2 two-stage payouts remain valid historical
-integration evidence but are not presented as proof of the v3 regression fix.
+The live v3 run confirmed that warning: round 1171's single-proof continuity
+path was rejected after the attestation window advanced, even though its
+authenticated transaction and Merkle data remained unchanged. A fresh batch
+request for rounds 1171–1172 produced a current continuity path and restored
+round 1171 verification. Round 1172's independently generated proof also
+verified. Operational rule: refresh both proofs immediately before a claim;
+do not assume an earlier cached continuity path remains accepted.
+
+The final atomic settlement receipt is documented in
+`P28-live-atomic-settlement.md`. The earlier v2 two-stage payouts remain valid
+historical integration evidence but are not presented as proof of the v3
+regression fix.
