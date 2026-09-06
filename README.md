@@ -72,6 +72,55 @@ history.
 
 ## Live demo and public evidence
 
+### Try the product
+
+Choose **Explore a completed payout** on the dashboard to follow policy 1's
+purchase, two Ethereum observations, verification, and 100 TestUSD payout without
+connecting a wallet. The walkthrough links the actual transactions and explicitly
+labels the demonstration threshold; it does not claim an economic USDC depeg.
+
+For a new policy, choose **Buy test coverage**, review the coverage, premium,
+beneficiary, activation delay, coverage duration, and payout condition, then
+approve the premium and purchase with a CC3 wallet. Keep the policy URL.
+
+The policy panel checks for qualifying observations every minute while visible.
+Once two observations are available to Attestcoin, select **Prepare claim**.
+The app fetches evidence and simulates the claim. Select **Claim payout** to
+confirm the transaction in your wallet. The app rechecks simulation before
+requesting the signature and links the resulting payout receipt.
+
+Oracle update times are not guaranteed. The minimum observation interval is
+not a countdown. Proofs may expire as attestation advances; automatic evidence
+gets one refresh attempt after a simulation failure or a 90-second preparation
+window, with manual refresh available afterward. This window is a UI freshness
+precaution, not a guaranteed protocol validity period.
+
+Proof JSON upload and inspection remain available under **Advanced**.
+
+### Automatic discovery service
+
+The Next.js deployment includes `GET /api/claims/:policyId` for observation
+discovery and `POST /api/claims/:policyId` for proof preparation. Neither endpoint
+signs or broadcasts transactions. They read the configured pool's immutable
+policy and product terms; callers cannot supply a source feed, RPC URL, threshold,
+beneficiary, or transaction hash. Nearby events use Attestcoin's batch endpoint
+to refresh their shared continuity anchor. More distant events use separate
+single-item batch requests; contract simulation remains the final eligibility check.
+
+Set `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` to the v3 pool. Optionally configure
+server-only `ETHEREUM_RPC_URL` with a provider supporting historical block reads
+and 1,000-block log queries; otherwise PublicNode with dRPC fallback is used. No private
+key is required. Requests have a 55-second budget, 512 KiB upstream response
+limit, a 250,000-block scan bound, and four concurrent jobs per server instance.
+GET results are cached for 30 seconds; prepared artifacts are not cached by this
+app. Instance-level limits are not a distributed rate limiter.
+
+Before publishing this automatic flow, verify an unpaid policy's discovery and
+proof preparation against your configured RPC. Free public endpoints can reject
+historical log requests; a successful build does not establish live RPC availability.
+If discovery fails, the dashboard keeps the policy unchanged, offers a retry,
+and retains the advanced proof-upload workflow.
+
 PegShield is deployed on Creditcoin CC3 testnet (chain ID `102031`). The public
 links below are safe to share with reviewers:
 

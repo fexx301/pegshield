@@ -1,6 +1,14 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { ClaimProgress } from "./ClaimProgress";
+import { CompletedPayout } from "./CompletedPayout";
 import {
   encodeFunctionData,
   formatUnits,
@@ -133,6 +141,12 @@ export function PegShieldDashboard() {
     "idle" | "validating" | "simulating" | "submitting" | "confirmed" | "error"
   >("idle");
   const [claimError, setClaimError] = useState<string>();
+  const [proofPreparedAt, setProofPreparedAt] = useState<number>();
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 10000);
+    return () => clearInterval(timer);
+  }, []);
   const { address, chainId, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -383,11 +397,34 @@ export function PegShieldDashboard() {
     query: { enabled: Boolean(claimWriter.data) },
   });
   const hasLivePolicy = Boolean(livePolicy && livePolicy.productId > 0n);
-  const nowSeconds = BigInt(Math.floor(Date.now() / 1_000));
+  const nowSeconds = BigInt(Math.floor(clock / 1_000));
   const activationComplete = Boolean(
     hasLivePolicy && livePolicy && nowSeconds >= livePolicy.startsAt,
   );
   const terminalPolicy = livePolicy?.state === 2 || livePolicy?.state === 3;
+  const proofTooOld =
+    proofPreparedAt !== undefined && clock - proofPreparedAt > 90000;
+  const acceptPrepared = useCallback(
+    (artifacts?: [ProofArtifact, ProofArtifact]) => {
+      setFirstClaimArtifact(artifacts?.[0]);
+      setConfirmationClaimArtifact(artifacts?.[1]);
+      setFirstClaimArtifactName(
+        artifacts ? "Automatically prepared" : undefined,
+      );
+      setConfirmationClaimArtifactName(
+        artifacts ? "Automatically prepared" : undefined,
+      );
+      setFirstClaimArtifactError(undefined);
+      setConfirmationClaimArtifactError(undefined);
+      setProofPreparedAt(artifacts ? Date.now() : undefined);
+      setClaimError(undefined);
+      setClaimStatus("idle");
+    },
+    [],
+  );
+  useEffect(() => {
+    acceptPrepared();
+  }, [selectedPolicyId, acceptPrepared]);
   const policyStateLabel = hasLivePolicy
     ? (["Active", "Breach observed", "Claimed", "Expired"][
         livePolicy?.state ?? 0
@@ -423,6 +460,8 @@ export function PegShieldDashboard() {
   const claimSimulationEnabled = Boolean(
     PEGSHIELD_POOL_ADDRESS &&
       connected &&
+      !terminalPolicy &&
+      !proofTooOld &&
       address &&
       hasLivePolicy &&
       firstClaimArtifact &&
@@ -435,6 +474,7 @@ export function PegShieldDashboard() {
     isPending: claimSimulationPending,
     isError: claimSimulationError,
     error: claimSimulationErrorValue,
+    refetch: recheckClaimSimulation,
   } = useSimulateContract({
     address: poolAddress,
     abi: CLAIM_WRITE_ABI,
@@ -621,6 +661,7 @@ export function PegShieldDashboard() {
       const parsed: unknown = JSON.parse(await file.text());
       const verified = await validateProofArtifact(parsed);
       setArtifact(verified.artifact);
+      setProofPreparedAt(Date.now());
       setClaimStatus("idle");
     } catch (error) {
       setClaimStatus("error");
@@ -628,9 +669,15 @@ export function PegShieldDashboard() {
     }
   }
 
-  function submitClaimProof() {
+  async function submitClaimProof() {
     setClaimError(undefined);
-    if (!claimSimulation?.request || !claimGasLimit) {
+    if (
+      !connected ||
+      terminalPolicy ||
+      proofTooOld ||
+      !claimSimulation?.request ||
+      !claimGasLimit
+    ) {
       setClaimStatus("error");
       setClaimError(
         claimGasError
@@ -641,8 +688,13 @@ export function PegShieldDashboard() {
     }
     try {
       setClaimStatus("submitting");
+      const fresh = await recheckClaimSimulation();
+      if (fresh.error || !fresh.data?.request)
+        throw new Error(
+          "Your evidence no longer passes verification. Refresh claim evidence and try again.",
+        );
       claimWriter.writeContract({
-        ...claimSimulation.request,
+        ...fresh.data.request,
         gas: claimGasLimit,
         account: address,
         chainId: CC3_TESTNET.id,
@@ -712,15 +764,16 @@ export function PegShieldDashboard() {
               When the peg breaks, <em>proof pays.</em>
             </h1>
             <p className="hero-copy">
-              PegShield turns a verified Ethereum price event into a
-              transparent, time-bounded USDC depeg claim on Creditcoin.
+              Buy fixed protection for USDC. When two price observations meet
+              your policy’s conditions, verified evidence unlocks your payout on
+              Creditcoin.
             </p>
             <div className="hero-actions">
               <a className="button" href="#product">
-                Explore protection
+                Buy test coverage
               </a>
-              <a className="button ghost" href="#evidence">
-                Inspect evidence
+              <a className="button ghost" href="#completed-payout">
+                Explore a completed payout
               </a>
             </div>
             <p className="hero-note">
@@ -989,6 +1042,46 @@ export function PegShieldDashboard() {
                   by a claim relayer.
                 </small>
               </div>
+              {liveProduct && (
+                <div className="purchase-summary">
+                  <h4>Your policy, before you buy</h4>
+                  <p>
+                    Fixed payout:{" "}
+                    <strong>
+                      {coverageUnits ? formatUnits(coverageUnits, 6) : "—"}{" "}
+                      TestUSD
+                    </strong>
+                    . One-time premium:{" "}
+                    <strong>
+                      {quotedPremium !== undefined
+                        ? formatUnits(quotedPremium, 6)
+                        : "—"}{" "}
+                      TestUSD
+                    </strong>
+                    .
+                  </p>
+                  <p>
+                    Coverage starts{" "}
+                    {formatDuration(liveProduct.activationDelay)} after purchase
+                    and lasts {formatDuration(liveProduct.policyDuration)}.
+                    Submit a qualifying claim within{" "}
+                    {formatDuration(liveProduct.claimGracePeriod)} after
+                    coverage ends.
+                  </p>
+                  <p>
+                    Requires two USDC/USD observations below{" "}
+                    {formatFeedUnits(liveProduct.triggerBelow)}, at least{" "}
+                    {formatDuration(liveProduct.minBreachDuration)} apart,
+                    during coverage. This is a demonstration threshold.
+                  </p>
+                  <p className="beneficiary-summary">
+                    Pays:{" "}
+                    {beneficiaryIsValid
+                      ? beneficiary
+                      : "Enter the beneficiary address above"}
+                  </p>
+                </div>
+              )}
               {connected && (
                 <div
                   className="wallet-facts"
@@ -1108,13 +1201,14 @@ export function PegShieldDashboard() {
           </div>
         </section>
 
+        <CompletedPayout />
         <section className="section" id="policy">
           <div className="section-heading">
             <h2>Selected policy, from activation to settlement.</h2>
             <p>
-              The selected-policy view keeps source time, relay time, and payout
-              state separate. A historical proof cannot be smuggled into a later
-              policy. The timeline is populated only from a live on-chain read.
+              Track your coverage and check for a payout. A qualifying pair must
+              occur during coverage and meet the minimum observation interval;
+              the next oracle update time is not guaranteed.
             </p>
           </div>
           <div className="timeline-layout">
@@ -1142,17 +1236,22 @@ export function PegShieldDashboard() {
                 </p>
                 <span className="timeline-meta">
                   {hasLivePolicy
-                    ? `starts at ${livePolicy?.startsAt.toString()}`
+                    ? `Starts ${new Date(Number(livePolicy!.startsAt) * 1000).toLocaleString()}`
                     : "activation is read from chain"}
                 </span>
               </div>
               <div
                 className={`timeline-step ${hasLivePolicy && !terminalPolicy ? "active" : ""}`}
               >
-                <h3>Awaiting two proofs</h3>
+                <h3>
+                  {terminalPolicy
+                    ? "Observation checks complete"
+                    : "Track qualifying observations"}
+                </h3>
                 <p>
-                  Both observations are submitted atomically. Confirmation must
-                  be later in round, timestamp, and minimum duration.
+                  We check for two qualifying price observations automatically.
+                  The minimum interval is not a countdown to a guaranteed
+                  payout.
                 </p>
                 <span className="timeline-meta">
                   {hasLivePolicy
@@ -1230,118 +1329,161 @@ export function PegShieldDashboard() {
           <article className="claim-card" aria-labelledby="claim-heading">
             <div className="claim-card-header">
               <div>
-                <span className="mono-label">Prepared proof relay</span>
-                <h3 id="claim-heading">Settle from verified evidence</h3>
+                <span className="mono-label">Your payout</span>
+                <h3 id="claim-heading">Prepare your claim</h3>
               </div>
               <span className="demo-tag">Atomic claim</span>
             </div>
             <p className="claim-intro">
-              Select two normalized artifacts produced by the worker. The
-              browser validates both checksums and proof shapes, then CC3
-              verifies and settles the ordered pair in one transaction. No
-              relayer can pin a late first observation.
+              We find qualifying observations and prepare the evidence for you.
+              Creditcoin checks your claim before you confirm a transaction in
+              your wallet.
             </p>
-            <div className="field">
-              <label htmlFor="first-proof-artifact">
-                First observation proof
-              </label>
-              <input
-                id="first-proof-artifact"
-                type="file"
-                accept="application/json,.json"
-                onChange={(event) => void handleProofFile("first", event)}
-                aria-describedby="first-proof-artifact-help"
+            {hasLivePolicy && (
+              <ClaimProgress
+                key={selectedPolicyId.toString()}
+                policyId={selectedPolicyId.toString()}
+                enabled={Boolean(PEGSHIELD_POOL_ADDRESS)}
+                onPrepared={acceptPrepared}
+                simulationFailed={claimSimulationError || proofTooOld}
+                submitting={claimStatus === "submitting"}
               />
-              <small id="first-proof-artifact-help">
-                Maximum 256 KiB. The artifact must use the pinned Ethereum
-                aggregator and AnswerUpdated topic.
-              </small>
-            </div>
-            {firstClaimArtifact && (
-              <dl className="claim-facts">
+            )}
+            {hasLivePolicy && (
+              <dl className="claim-facts policy-summary">
                 <div>
-                  <dt>First file</dt>
-                  <dd>{firstClaimArtifactName ?? "proof.json"}</dd>
+                  <dt>Fixed coverage</dt>
+                  <dd>{formatUnits(livePolicy!.coverage, 6)} TestUSD</dd>
                 </div>
                 <div>
-                  <dt>First event</dt>
+                  <dt>Premium paid</dt>
+                  <dd>{formatUnits(livePolicy!.premium, 6)} TestUSD</dd>
+                </div>
+                <div>
+                  <dt>Locked beneficiary</dt>
+                  <dd>{livePolicy!.beneficiary}</dd>
+                </div>
+                <div>
+                  <dt>Coverage ends</dt>
                   <dd>
-                    round {firstClaimArtifact.decodedExpected.roundId} · answer{" "}
-                    {firstClaimArtifact.decodedExpected.answer}
+                    {new Date(
+                      Number(livePolicy!.endsAt) * 1000,
+                    ).toLocaleString()}
                   </dd>
-                </div>
-                <div>
-                  <dt>First proof digest</dt>
-                  <dd>{proofDigest(firstClaimArtifact)}</dd>
                 </div>
               </dl>
             )}
-            {firstClaimArtifactError && (
-              <p className="claim-status error" role="alert">
-                {firstClaimArtifactError}
-              </p>
-            )}
-            <div className="field">
-              <label htmlFor="confirmation-proof-artifact">
-                Confirmation observation proof
-              </label>
-              <input
-                id="confirmation-proof-artifact"
-                type="file"
-                accept="application/json,.json"
-                onChange={(event) =>
-                  void handleProofFile("confirmation", event)
-                }
-                aria-describedby="confirmation-proof-artifact-help"
-              />
-              <small id="confirmation-proof-artifact-help">
-                Must be a distinct later round and satisfy the product’s minimum
-                observation interval.
-              </small>
-            </div>
-            {confirmationClaimArtifact && (
-              <dl className="claim-facts">
-                <div>
-                  <dt>Confirmation file</dt>
-                  <dd>{confirmationClaimArtifactName ?? "proof.json"}</dd>
-                </div>
-                <div>
-                  <dt>Confirmation event</dt>
-                  <dd>
-                    round {confirmationClaimArtifact.decodedExpected.roundId} ·
-                    answer {confirmationClaimArtifact.decodedExpected.answer}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Confirmation digest</dt>
-                  <dd>{proofDigest(confirmationClaimArtifact)}</dd>
-                </div>
-              </dl>
-            )}
-            {confirmationClaimArtifactError && (
-              <p className="claim-status error" role="alert">
-                {confirmationClaimArtifactError}
-              </p>
-            )}
+            <details className="advanced-proofs">
+              <summary>Advanced: inspect or upload proof files</summary>
+              <div className="field">
+                <label htmlFor="first-proof-artifact">
+                  First observation proof
+                </label>
+                <input
+                  id="first-proof-artifact"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(event) => void handleProofFile("first", event)}
+                  aria-describedby="first-proof-artifact-help"
+                />
+                <small id="first-proof-artifact-help">
+                  Maximum 256 KiB. The artifact must use the pinned Ethereum
+                  aggregator and AnswerUpdated topic.
+                </small>
+              </div>
+              {firstClaimArtifact && (
+                <dl className="claim-facts">
+                  <div>
+                    <dt>First file</dt>
+                    <dd>{firstClaimArtifactName ?? "proof.json"}</dd>
+                  </div>
+                  <div>
+                    <dt>First event</dt>
+                    <dd>
+                      round {firstClaimArtifact.decodedExpected.roundId} ·
+                      answer {firstClaimArtifact.decodedExpected.answer}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>First proof digest</dt>
+                    <dd>{proofDigest(firstClaimArtifact)}</dd>
+                  </div>
+                </dl>
+              )}
+              {firstClaimArtifactError && (
+                <p className="claim-status error" role="alert">
+                  {firstClaimArtifactError}
+                </p>
+              )}
+              <div className="field">
+                <label htmlFor="confirmation-proof-artifact">
+                  Confirmation observation proof
+                </label>
+                <input
+                  id="confirmation-proof-artifact"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(event) =>
+                    void handleProofFile("confirmation", event)
+                  }
+                  aria-describedby="confirmation-proof-artifact-help"
+                />
+                <small id="confirmation-proof-artifact-help">
+                  Must be a distinct later round and satisfy the product’s
+                  minimum observation interval.
+                </small>
+              </div>
+              {confirmationClaimArtifact && (
+                <dl className="claim-facts">
+                  <div>
+                    <dt>Confirmation file</dt>
+                    <dd>{confirmationClaimArtifactName ?? "proof.json"}</dd>
+                  </div>
+                  <div>
+                    <dt>Confirmation event</dt>
+                    <dd>
+                      round {confirmationClaimArtifact.decodedExpected.roundId}{" "}
+                      · answer{" "}
+                      {confirmationClaimArtifact.decodedExpected.answer}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Confirmation digest</dt>
+                    <dd>{proofDigest(confirmationClaimArtifact)}</dd>
+                  </div>
+                </dl>
+              )}
+              {confirmationClaimArtifactError && (
+                <p className="claim-status error" role="alert">
+                  {confirmationClaimArtifactError}
+                </p>
+              )}
+            </details>
             <div className="claim-actions">
               <p className="claim-status" role="status" aria-live="polite">
-                {!connected
-                  ? "Connect a CC3 wallet to simulate a claim"
-                  : !hasLivePolicy
-                    ? "Select a live policy before loading a proof"
-                    : !firstClaimArtifact || !confirmationClaimArtifact
-                      ? "Load both normalized proof artifacts"
-                      : claimStatus === "validating"
-                        ? "Validating artifact checksum…"
-                        : claimSimulationPending
-                          ? "Simulating proof against CC3…"
-                          : claimSimulation?.request
-                            ? `Simulation passed · ${claimGasLimit ? `${claimGasLimit.toString()} gas limit` : "estimating gas"}`
-                            : claimSimulationError
-                              ? `Simulation rejected · ${describeError(claimSimulationErrorValue)}`
-                              : claimGasError
-                                ? "CC3 gas estimation failed; nothing can be submitted"
-                                : "Waiting for the CC3 simulation result"}
+                {terminalPolicy
+                  ? policyStateLabel === "Claimed"
+                    ? "Payout completed. This policy cannot pay twice."
+                    : "This policy has expired."
+                  : proofTooOld
+                    ? "Evidence needs refreshing. Use Prepare claim again before signing."
+                    : !connected
+                      ? "Connect a CC3 wallet to simulate a claim"
+                      : !hasLivePolicy
+                        ? "Select a live policy before loading a proof"
+                        : !firstClaimArtifact || !confirmationClaimArtifact
+                          ? "Once two observations qualify, select Prepare claim above."
+                          : claimStatus === "validating"
+                            ? "Validating artifact checksum…"
+                            : claimSimulationPending
+                              ? "Simulating proof against CC3…"
+                              : claimSimulation?.request
+                                ? `Simulation passed · ${claimGasLimit ? "ready for your wallet confirmation" : "estimating transaction cost"}`
+                                : claimSimulationError
+                                  ? `Simulation rejected · ${describeError(claimSimulationErrorValue)}`
+                                  : claimGasError
+                                    ? "CC3 gas estimation failed; nothing can be submitted"
+                                    : "Waiting for the CC3 simulation result"}
               </p>
               <button
                 className="button"
@@ -1349,20 +1491,29 @@ export function PegShieldDashboard() {
                 onClick={submitClaimProof}
                 disabled={
                   !connected ||
+                  terminalPolicy ||
+                  proofTooOld ||
+                  claimSimulationError ||
                   !claimSimulation?.request ||
                   !claimGasLimit ||
                   claimStatus === "submitting" ||
                   claimStatus === "validating"
                 }
               >
-                {claimStatus === "submitting"
-                  ? "Submitting…"
-                  : "Submit atomic claim"}
+                {claimStatus === "submitting" ? "Submitting…" : "Claim payout"}
               </button>
             </div>
             {claimStatus === "confirmed" && claimWriter.data && (
               <p className="claim-status success" role="status">
-                Claim confirmed on CC3: {claimWriter.data}
+                {formatUnits(livePolicy?.coverage ?? 0n, 6)} TestUSD paid to{" "}
+                {livePolicy?.beneficiary}.{" "}
+                <a
+                  href={`https://creditcoin-testnet.blockscout.com/tx/${claimWriter.data}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View payout receipt ↗
+                </a>
               </p>
             )}
             {claimStatus === "error" && claimError && (

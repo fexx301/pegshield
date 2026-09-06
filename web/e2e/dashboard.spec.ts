@@ -1,5 +1,71 @@
 import { expect, test } from "@playwright/test";
 
+test("completed payout is usable on a small screen without a wallet", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/?policy=1");
+  await page.getByRole("link", { name: "Explore a completed payout" }).click();
+  await page.getByRole("button", { name: /Two price observations/ }).click();
+  await expect(
+    page.getByRole("link", { name: /View the confirmation/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /100 TestUSD paid/ }).click();
+  await expect(
+    page.getByRole("link", { name: /View the payout transfer/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/not an actual economic USDC depeg/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/payout-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("automatic preparation explains failures and offers recovery", async ({
+  page,
+}) => {
+  await page.route("**/api/claims/1", async (route) => {
+    if (route.request().method() === "POST")
+      return route.fulfill({
+        status: 502,
+        json: { error: "Evidence service unavailable. Please retry shortly." },
+      });
+    return route.fulfill({
+      json: {
+        eligibility: {
+          status: "eligible",
+          observations: [],
+          checkedAt: new Date().toISOString(),
+        },
+      },
+    });
+  });
+  await page.goto("/?policy=1");
+  await expect(
+    page.getByRole("button", { name: "Prepare claim", exact: true }),
+  ).toBeEnabled({ timeout: 30000 });
+  await page
+    .getByRole("button", { name: "Prepare claim", exact: true })
+    .click();
+  await expect(
+    page.getByText("Evidence service unavailable. Please retry shortly."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry network check" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Claim payout" }),
+  ).toBeDisabled();
+});
+
 test("dashboard exposes the evidence-first purchase flow", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -15,7 +81,9 @@ test("dashboard exposes the evidence-first purchase flow", async ({ page }) => {
       .first(),
   ).toBeVisible({ timeout: 30_000 });
   if (await page.getByText("CC3 pool read verified").isVisible()) {
-    await expect(page.getByText("Purchased")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Purchased", exact: true }),
+    ).toBeVisible();
   } else {
     await expect(
       page.getByText("deployment manifest pending").first(),
@@ -35,17 +103,23 @@ test("dashboard exposes the evidence-first purchase flow", async ({ page }) => {
     page.getByRole("button", { name: "Purchase policy" }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("heading", { name: "Settle from verified evidence" }),
+    page.getByRole("heading", { name: "Prepare your claim" }),
   ).toBeVisible();
+  await expect(page.getByLabel("First observation proof")).not.toBeVisible();
+  await page.getByText("Advanced: inspect or upload proof files").click();
   await expect(page.getByLabel("First observation proof")).toBeVisible();
   await expect(page.getByLabel("Confirmation observation proof")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Submit atomic claim" }),
+    page.getByRole("button", { name: "Claim payout" }),
   ).toBeDisabled();
-  await page.getByRole("link", { name: "Inspect evidence" }).click();
+  await page.getByRole("link", { name: "Explore a completed payout" }).click();
   await expect(
-    page.getByRole("heading", { name: "Independent facts, one panel." }),
+    page.getByRole("heading", { name: "Follow a completed payout." }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /100 TestUSD paid/ }).click();
+  await expect(
+    page.getByRole("link", { name: /View the payout transfer/ }),
+  ).toHaveAttribute("href", /0xc509b357/);
 });
 
 test("dashboard keeps a shareable policy selection after reload", async ({
