@@ -795,6 +795,11 @@ export function PegShieldDashboard() {
                       : "Fixture view"}
               </span>
             </div>
+            <p className="attestcoin-callout">
+              <strong>Why Attestcoin?</strong> Attestcoin is the trust boundary:
+              CC3 verifies Ethereum evidence without trusting PegShield&apos;s
+              server.
+            </p>
             <div className="console-body">
               <div
                 className="console-state"

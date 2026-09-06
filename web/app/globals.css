@@ -426,6 +426,22 @@ a {
   border-bottom: 1px solid var(--line);
   padding: 14px 17px;
 }
+.attestcoin-callout {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 17px 13px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.attestcoin-callout strong {
+  color: var(--accent);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  margin-right: 5px;
+  text-transform: uppercase;
+}
 .console-title {
   color: var(--soft);
   font-family: "SFMono-Regular", Consolas, monospace;
