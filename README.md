@@ -109,8 +109,9 @@ single-item batch requests; contract simulation remains the final eligibility ch
 
 Set `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` to the v3 pool. Optionally configure
 server-only `ETHEREUM_RPC_URL` with a provider supporting historical block reads
-and 1,000-block log queries; otherwise PublicNode with dRPC fallback is used. No private
-key is required. Requests have a 55-second budget, 512 KiB upstream response
+and 1,000-block log queries; PublicNode and dRPC remain fallbacks for individual
+requests if the preferred endpoint is unavailable. No private key is required.
+Requests have a 55-second budget, 512 KiB upstream response
 limit, a 250,000-block scan bound, and four concurrent jobs per server instance.
 GET results are cached for 30 seconds; prepared artifacts are not cached by this
 app. Instance-level limits are not a distributed rate limiter.

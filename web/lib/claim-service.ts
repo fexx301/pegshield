@@ -110,10 +110,11 @@ export async function discoverClaim(policyId: bigint, signal: AbortSignal) {
   });
   const eth = createPublicClient({
     transport: fallback(
-      (process.env.ETHEREUM_RPC_URL
-        ? [process.env.ETHEREUM_RPC_URL]
-        : ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org"]
-      ).map((url) =>
+      [
+        ...(process.env.ETHEREUM_RPC_URL ? [process.env.ETHEREUM_RPC_URL] : []),
+        "https://ethereum-rpc.publicnode.com",
+        "https://eth.drpc.org",
+      ].map((url) =>
         http(url, { retryCount: 0, timeout: 5000, fetchOptions: { signal } }),
       ),
       { retryCount: 0 },
