@@ -824,26 +824,22 @@ export function PegShieldDashboard() {
               </div>
               <div className="console-big">1 → 3</div>
               <p className="console-sub">Ethereum event · CC3 settlement</p>
-              <div className="console-grid">
-                <div className="console-cell">
-                  <span className="mono-label">Source feed</span>
-                  <strong>USDC / USD</strong>
+              <div className="console-grid" role="list" aria-label="Trust boundary flow">
+                <div className="console-cell" role="listitem">
+                  <span className="mono-label">Ethereum</span>
+                  <strong>Supplies observation</strong>
                 </div>
-                <div className="console-cell">
-                  <span className="mono-label">Threshold</span>
-                  <strong>
-                    {liveProduct
-                      ? `< ${formatFeedUnits(liveProduct.triggerBelow)}`
-                      : "Waiting for live read"}
-                  </strong>
+                <div className="console-cell" role="listitem">
+                  <span className="mono-label">Attestcoin</span>
+                  <strong>Proves observation</strong>
                 </div>
-                <div className="console-cell">
-                  <span className="mono-label">Proof type</span>
-                  <strong>EVM-v1 receipt</strong>
+                <div className="console-cell" role="listitem">
+                  <span className="mono-label">PegShield</span>
+                  <strong>Checks policy terms</strong>
                 </div>
-                <div className="console-cell">
-                  <span className="mono-label">Receipt log</span>
-                  <strong>position 2 / success</strong>
+                <div className="console-cell" role="listitem">
+                  <span className="mono-label">Creditcoin CC3</span>
+                  <strong>Enforces payout atomically</strong>
                 </div>
               </div>
             </div>
