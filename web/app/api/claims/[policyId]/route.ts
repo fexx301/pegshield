@@ -57,8 +57,18 @@ async function handle(
       cache.set(key, { until: Date.now() + 30000, value });
     }
     return reply(value);
-  } catch {
+  } catch (error) {
     // Do not return upstream exceptions: RPC URLs may contain credentials.
+    // Keep a redacted first-line diagnostic in platform logs for operators.
+    // The client still receives the same recovery-safe message.
+    const detail = error instanceof Error ? error.message : "unknown";
+    console.error(
+      "claim service failure",
+      (detail.split("\n", 1)[0] ?? detail).replace(
+        /https?:\/\/[^\s]+/g,
+        "[upstream URL]",
+      ),
+    );
     return reply(
       {
         error:
