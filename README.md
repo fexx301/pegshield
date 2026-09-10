@@ -1,148 +1,255 @@
 # PegShield
 
-PegShield is an evidence-first parametric USDC depeg protection prototype for
-Creditcoin CC3 testnet. A permissionless relayer submits two Attestcoin proofs
-of Ethereum `AnswerUpdated` receipts in one atomic claim; the CC3 pool checks
-their source chronology, threshold, replay status, and reserve accounting
-before paying a fixed amount of demo TestUSD to the beneficiary stored at
-purchase.
+PegShield is a **testnet prototype for fixed-payout USDC depeg protection on
+Creditcoin CC3**. Buying a policy reserves a fixed TestUSD payout from an
+underwriter-funded CC3 pool and locks the beneficiary and claim rules. The
+policy can settle later if a pinned Ethereum USDC/USD feed records the required
+price observations.
 
-This is a hackathon prototype, not insurance or a production stablecoin.
-`TestUSD` is intentionally a six-decimal demo token. Never send production
+This is a hackathon prototype, not insurance, a stablecoin, or financial
+advice. The payout token is six-decimal demo `TestUSD`; never send production
 assets or private keys to this repository.
 
-## User-friendly explanation
+## In 30 seconds
 
-PegShield is fixed-payout protection for a USDC depeg on Creditcoin CC3
-testnet. An underwriter deposits TestUSD into a visible pool. A user connects
-a CC3 wallet, chooses coverage and a beneficiary, pays a one-time premium, and
-gets a policy whose terms are locked at purchase.
+### The problem
 
-If the pinned Ethereum USDC/USD aggregator emits two qualifying
-below-threshold `AnswerUpdated` events after activation, Attestcoin proves the
-exact Ethereum receipts. A permissionless relayer submits both proofs in one
-transaction, but the CC3 contract makes the decision: it checks the aggregator,
-event topic, receipt success, threshold, chronology, timing, replay status, and
-reserve capacity. Once the pair passes, the pool pays the exact coverage to the
-beneficiary stored in the policy, marks it `Claimed`, and blocks replay.
+A lending market, credit protocol, or RWA vault can depend on USDC while its
+liquidity lives on another chain. When USDC moves below a chosen threshold,
+the application needs a payout it can verify without trusting a private
+operator to report the event correctly.
 
-In one sentence: **buy fixed coverage, prove the depeg twice, and let CC3 pay
-the locked beneficiary without a bridge or a hidden oracle.** The deployed
-threshold is an intentionally visible testnet/demo parameter, not a production
-insurance recommendation.
+### The product
 
-Creditcoin is useful here because a lending market, credit protocol, or RWA
-vault on CC3 can name itself as the policy beneficiary. Ethereum supplies the
-widely used USDC/USD source event, Attestcoin proves it without a trusted
-operator, and CC3 settles protection directly where the credit application
-needs liquidity.
+An underwriter (the pool funder) deposits demo TestUSD into a visible CC3 pool.
+A user buys a policy, chooses the beneficiary, and pays a one-time premium. The
+policy records its coverage, premium, beneficiary, timing, and immutable
+product reference; that referenced product fixes the feed, threshold, and
+minimum observation interval.
 
-## Current status
+If the policy later has two qualifying observations, anyone can submit the
+corresponding proofs. CC3 verifies both proofs and pays the exact locked
+coverage atomically. The user does not have to trust the relayer, the browser,
+or PegShield's server to choose the price or beneficiary.
 
-The offline protocol core is implemented and reproducible:
+### The trust boundary
 
-- Attestcoin/CC3 discovery is locked at chain ID `102031`, with the official
-  BlockProver, ChainInfo, EVM-v1 decoder, and a verified Ethereum fixture.
-- `AttestcoinVerifierAdapter` calls the official proof boundary and exposes
-  only an authenticated receipt log.
-- `PegShieldPool` has exact token-delta accounting, immutable product/policy
-  terms, atomic two-proof settlement, expiry, replay protection, and
-  effects-before-transfer payout ordering. Atomic settlement prevents a
-  permissionless relayer from pinning an unusably late first observation.
-- 62 Foundry tests pass, including 256-run invariant properties and an ERC20
-  callback/reentrancy test. The worker has 21 deterministic tests covering
-  artifact integrity, exact event filtering, bounded proof-service behavior,
-  and CC3 claim calldata. The web build and local Playwright smoke test pass.
-- The CC3 deployment is live on testnet and recorded in the validated
-  `deployments/cc3-testnet-v3.json` manifest. The preserved v1/v2 manifests
-  remain available as historical deployment evidence.
-- Policy 1 completed the v3 atomic two-proof path on CC3: Ethereum rounds 1171
-  and 1172 were authenticated in one transaction and the pool transferred the
-  exact 100 tUSD coverage to the beneficiary locked at purchase.
-- Funded credentials remain local and ignored. The web dashboard reads the
-  deployed pool when `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` is configured. It
-  now exposes wallet-gated exact-premium purchase and verified-proof claim
-  controls. Funded-wallet and claim-rehearsal evidence is kept in a separate
-  private release packet; this public checkout contains the implementation and
-  protocol documentation.
+| Layer | Responsibility |
+| --- | --- |
+| **Ethereum** | Supplies the source observation: the pinned USDC/USD aggregator emits an `AnswerUpdated` event. |
+| **Attestcoin** | Authenticates each Ethereum receipt and anchors its source block in Attestcoin's accepted header history. |
+| **PegShield** | Reads the authenticated event and checks the policy terms: feed, topic, threshold, timing, replay status, and reserve. |
+| **Creditcoin CC3** | Enforces the decision on-chain and transfers the fixed TestUSD payout to the beneficiary stored in the policy. |
 
-Public technical evidence lives in [`docs/evidence`](docs/evidence). Private
-planning, wallet-linked evidence, and release notes are kept outside public
-history.
+In one sentence: **Ethereum observes, Attestcoin proves, PegShield evaluates,
+and CC3 settles.** Attestcoin is pivotal because the CC3 contract can verify
+Ethereum evidence without trusting PegShield's server or a relayer's claim
+about what happened.
 
-## Live demo and public evidence
+### Two words to know
 
-### Try the product
+- **Depeg:** the source USDC/USD answer is below the policy's configured
+  threshold. This demo deliberately uses a visible testnet threshold; it is
+  not a claim that USDC experienced a real economic depeg.
+- **Policy:** the on-chain record that links fixed product rules to the buyer,
+  beneficiary, coverage, premium, and timing. Purchasing it transfers the
+  premium into the pool and reserves its fixed coverage amount. The payout is
+  not reimbursement for a user's measured loss.
 
-Choose **Explore a completed payout** on the dashboard to follow policy 1's
-purchase, two Ethereum observations, verification, and 100 TestUSD payout without
-connecting a wallet. The walkthrough links the actual transactions and explicitly
-labels the demonstration threshold; it does not claim an economic USDC depeg.
+### Technical terms
 
-For a new policy, choose **Buy test coverage**, review the coverage, premium,
-beneficiary, activation delay, coverage duration, and payout condition, then
-approve the premium and purchase with a CC3 wallet. Keep the policy URL.
+- **Receipt:** Ethereum's transaction record, including the logs emitted by the
+  aggregator. PegShield needs the receipt, not a relayer's summary of it.
+- **Attestcoin proof:** a proof artifact that lets CC3's verifier authenticate
+  the receipt and the selected `AnswerUpdated` log.
+- **Relayer:** any permissionless account or service that submits proof bytes to
+  CC3. It can pay gas, but it cannot change the policy terms or force a payout.
+- **Continuity:** the proof component that anchors each source block in
+  Attestcoin's accepted Ethereum header history. PegShield—not the continuity
+  proof—checks that the two authenticated observations are ordered and
+  sufficiently far apart. It does not prove the price remained below the
+  threshold between them.
+- **Aggregator:** the pinned Ethereum smart contract that publishes the
+  USDC/USD price-feed updates PegShield accepts.
+- **Accepted source-block window:** the Ethereum block-header history that
+  Attestcoin and CC3 currently recognize for proof verification. As this
+  attestation window advances, older proof artifacts can expire.
 
-The policy panel checks for qualifying observations every minute while visible.
-Once two observations are available to Attestcoin, select **Prepare claim**.
-The app fetches evidence and simulates the claim. Select **Claim payout** to
-confirm the transaction in your wallet. The app rechecks simulation before
-requesting the signature and links the resulting payout receipt.
+## Start here: the user flow
 
-Oracle update times are not guaranteed. The minimum observation interval is
-not a countdown. Proofs may expire as attestation advances; automatic evidence
-gets one refresh attempt after a simulation failure or a 90-second preparation
-window, with manual refresh available afterward. This window is a UI freshness
-precaution, not a guaranteed protocol validity period.
+The public dashboard has three useful paths. They are intentionally separate so
+someone can understand the product before connecting a wallet.
 
-Proof JSON upload and inspection remain available under **Advanced**.
+### 1. Fastest path — completed payout, no wallet
 
-### Automatic discovery service
+1. Open [the completed-policy walkthrough](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1).
+2. Choose **Explore a completed payout**.
+3. Follow the visible timeline: purchase → two Ethereum observations →
+   Attestcoin verification → atomic CC3 payout.
+4. Open the linked explorer transactions to verify the exact policy purchase,
+   proofs, and 100 TestUSD transfer.
 
-The Next.js deployment includes `GET /api/claims/:policyId` for observation
-discovery and `POST /api/claims/:policyId` for proof preparation. Neither endpoint
-signs or broadcasts transactions. They read the configured pool's immutable
-policy and product terms; callers cannot supply a source feed, RPC URL, threshold,
-beneficiary, or transaction hash. Nearby events use Attestcoin's batch endpoint
-to refresh their shared continuity anchor. More distant events use separate
-single-item batch requests; contract simulation remains the final eligibility check.
+This path is deterministic and does not claim a live economic depeg. It is the
+best first read or screen-recording path.
 
-Set `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` to the v3 pool. Optionally configure
-server-only `ETHEREUM_RPC_URL` with a provider supporting historical block reads
-and 1,000-block log queries; PublicNode and dRPC remain fallbacks for individual
-requests if the preferred endpoint is unavailable. No private key is required.
-Requests have a 55-second budget, 512 KiB upstream response
-limit, a 250,000-block scan bound, and four concurrent jobs per server instance.
-GET results are cached for 30 seconds; prepared artifacts are not cached by this
-app. Instance-level limits are not a distributed rate limiter.
+### 2. Policy 2 — inspect discovery and prepare a claim
 
-Before publishing this automatic flow, verify an unpaid policy's discovery and
-proof preparation against your configured RPC. Free public endpoints can reject
-historical log requests; a successful build does not establish live RPC availability.
-If discovery fails, the dashboard keeps the policy unchanged, offers a retry,
-and retains the advanced proof-upload workflow.
+1. Open the [policy-2 claim-preparation path](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2).
+2. Read the policy terms and wait for the panel to report its current
+   observation state. The app checks while the page is visible.
+3. When it reports that the policy is eligible, select **Prepare claim**.
+   The app discovers the two source events, obtains Attestcoin proof artifacts,
+   and simulates the CC3 transaction before asking for a signature.
+4. Review the proof and simulation result. A successful preparation means the
+   evidence currently simulates successfully; the app re-simulates before
+   requesting a signature, because proof freshness can change.
 
-PegShield is deployed on Creditcoin CC3 testnet (chain ID `102031`). The public
-links below are safe to share with reviewers:
+Policy 2 was verified as eligible on 2026-09-06, but its on-chain state is
+time-dependent. Treat the panel's current status as authoritative; the URL is
+an example, not a permanent eligibility promise.
 
-- [Open the live dashboard](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1)
-- [PegShield v3 pool on CC3](https://creditcoin-testnet.blockscout.com/address/0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b)
-- [TestUSD v3 token on CC3](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
-- [Attestcoin v3 verifier adapter on CC3](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
-- [V3 policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe)
-- [V3 atomic claim and 100 tUSD payout](https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5)
-- [V3 Ethereum first observation, round 1171](https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32)
-- [V3 Ethereum confirmation, round 1172](https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9)
+Oracle update times are not guaranteed. Two observations must qualify under the
+policy's interval and threshold; they do not prove that the price stayed below
+the threshold continuously between them. Proofs can age out as Attestcoin's
+accepted source-block window advances, so refresh evidence close to simulation
+time.
+
+### 3. Full wallet path — buy and claim your own policy
+
+1. On the dashboard choose **Buy test coverage** and connect a CC3 testnet
+   wallet.
+2. Review the displayed coverage, exact premium, beneficiary, activation delay,
+   duration, threshold, and observation interval. Approve the premium, then
+   confirm the purchase. Save the resulting policy URL; it encodes the policy
+   number so the dashboard can reopen it later.
+3. Fund the wallet with native testnet CTC for gas and enough six-decimal
+   TestUSD for the quoted premium. The token has no public faucet; see
+   [Getting demo TestUSD](#getting-demo-testusd).
+4. After activation, wait for the policy panel to report qualifying
+   observations. Select **Prepare claim**, inspect the simulation, then select
+   **Claim payout** and confirm the CC3 transaction in the wallet.
+5. After confirmation the policy becomes `Claimed`, the stored beneficiary
+   receives exactly the stored coverage, and the dashboard links the payout
+   receipt. A second submission is rejected by replay protection.
+
+The claim controls are wallet-gated. The browser and the automatic service can
+prepare evidence, but neither can sign or broadcast a transaction for you.
+Proof JSON upload and inspection remain available under **Advanced** if an RPC
+provider cannot serve the automatic discovery request.
+
+## What is live and what is proven
+
+The public CC3 deployment is live on testnet (chain ID `102031`). Policy 1
+completed the v3 atomic two-proof path: Ethereum rounds 1171 and 1172 were
+authenticated in one transaction and the pool transferred exactly 100 tUSD to
+the beneficiary locked at purchase.
+
+The repository also contains a reproducible offline core:
+
+- `AttestcoinVerifierAdapter` calls the official Attestcoin proof boundary and
+  exposes only an authenticated receipt log. See
+  [`contracts/src/AttestcoinVerifierAdapter.sol`](contracts/src/AttestcoinVerifierAdapter.sol)
+  and [adapter evidence](docs/evidence/P07-adapter.md).
+- `PegShieldPool` implements immutable terms, exact token-delta accounting,
+  expiry, replay protection, effects-before-transfer ordering, and atomic
+  two-proof settlement. See
+  [`contracts/src/PegShieldPool.sol`](contracts/src/PegShieldPool.sol) and
+  [claim evidence](docs/evidence/P08-claims.md).
+- The worker discovers source events, builds and normalizes proof artifacts,
+  and emits claim calldata without holding a signing key. See
+  [`worker/src/discover.ts`](worker/src/discover.ts),
+  [`worker/src/proofBuilder.ts`](worker/src/proofBuilder.ts), and
+  [worker evidence](docs/evidence/P10-worker.md).
+- The Next.js dashboard reads the pool, shows policy state, and gates purchase
+  and claim writes behind the connected wallet. See
+  [`web/components/PegShieldDashboard.tsx`](web/components/PegShieldDashboard.tsx)
+  and [browser-path evidence](docs/evidence/P23-browser-write-path.md).
+- The automatic web proof path is implemented in
+  [`web/lib/claim-service.ts`](web/lib/claim-service.ts),
+  [`web/lib/proof.ts`](web/lib/proof.ts), and
+  [`web/app/api/claims/[policyId]/route.ts`](web/app/api/claims/[policyId]/route.ts).
+- The pinned Attestcoin/CC3 discovery lock, verified Ethereum fixture, and
+  v3 deployment manifest are committed in
+  [`docs/discovery-lock.json`](docs/discovery-lock.json),
+  [`worker/fixtures/historical-proof.json`](worker/fixtures/historical-proof.json),
+  and [`deployments/cc3-testnet-v3.json`](deployments/cc3-testnet-v3.json).
+
+The latest recorded validation reports [62 Foundry tests](docs/evidence/P09-contract-gas.md),
+[21 worker tests](docs/evidence/P10-worker.md), invariant runs, an ERC-20
+callback/reentrancy test, a web build, and a local Playwright smoke test
+([browser evidence](docs/evidence/P17-e2e.md)). Run the commands in
+[Local verification](#local-verification) to reproduce them; counts
+may grow as the prototype changes.
+
+## Public evidence
+
+Use these links in order. Historical v1/v2 transactions are retained as
+context; the v3 links are the current product path.
+
+### Start with the product
+
+- [Live dashboard — completed walkthrough (policy 1)](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1)
+- [Live dashboard — policy-2 claim-preparation example](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2)
+- [CC3 v3 pool](https://creditcoin-testnet.blockscout.com/address/0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b)
+- [CC3 v3 TestUSD](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
+- [CC3 v3 Attestcoin adapter](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
+
+### Completed v3 settlement
+
+- [Policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe)
+- [Atomic claim and 100 tUSD payout](https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5)
+- [Ethereum source event, round 1171](https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32)
+- [Ethereum confirmation, round 1172](https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9)
+- [Atomic-settlement evidence](docs/evidence/P28-live-atomic-settlement.md)
+
+### Contracts, worker, and browser evidence
+
+- [Discovery lock](docs/evidence/P02-discovery.md)
+- [Verified Ethereum fixture](docs/evidence/P03-fixture.md)
+- [Adapter evidence](docs/evidence/P07-adapter.md)
+- [Claim and accounting evidence](docs/evidence/P08-claims.md)
+- [Worker evidence](docs/evidence/P10-worker.md)
+- [Deployment evidence](docs/evidence/P11-deployment.md)
+- [Proof-service evidence](docs/evidence/P16-proof-service.md)
+- [Browser E2E evidence](docs/evidence/P17-e2e.md)
+- [Atomic v3 implementation evidence](docs/evidence/P27-atomic-v3.md)
+
+### Historical context
+
 - [Prior live breach observation](https://creditcoin-testnet.blockscout.com/tx/0xbf43319f0b2adcc95a1c629bb076f588fb884a19b43fc5342d1ba6d7ac5dbaa4)
 - [Prior live confirmation and payout](https://creditcoin-testnet.blockscout.com/tx/0x96039de10e844504a847b8f1c1a99e71e58de03b6dd27284d268e9497054e770)
 - [Ethereum source event, round 1169](https://etherscan.io/tx/0xb9f980da1350fbb2350fe6b6bdbc3fba3717c556662e3b6b275b495f84ca6eb0)
 - [Ethereum source event, round 1170](https://etherscan.io/tx/0x5adcdf88fe55221c6e23d1aad108bf1e75120b0165792a0ed12146159a95cb43)
 
-Attestcoin is the trust boundary: the relayer supplies a proof of the exact
-Ethereum receipt, the CC3 verifier authenticates it, and the adapter exposes
-only the locked `AnswerUpdated` event to the pool. The public dashboard shows
-the terminal demo policy and its evidence; all contract writes remain wallet-
-gated and testnet-only.
+## Automatic discovery service (advanced)
+
+The deployed Next.js app exposes `GET /api/claims/:policyId` for observation
+discovery and `POST /api/claims/:policyId` for proof preparation. Neither
+endpoint signs or broadcasts a transaction. Both read the pool's immutable
+policy and product terms; callers cannot supply a source feed, RPC URL,
+threshold, beneficiary, or transaction hash.
+
+Nearby events use Attestcoin's batch endpoint to refresh their shared continuity
+anchor. More distant events use separate single-item batch requests. The CC3
+contract simulation remains the final eligibility check.
+
+For a self-hosted deployment, set `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` to the
+v3 pool. Optionally set server-only `ETHEREUM_RPC_URL` to a provider that
+supports historical block reads and 1,000-block log queries. PublicNode and
+dRPC are fallbacks for individual requests when the preferred endpoint is
+unavailable. No private key is required.
+
+The service has a 55-second request budget, 512 KiB upstream response limit, a
+250,000-block scan bound, and four concurrent jobs per server instance. GET
+results are cached for 30 seconds; prepared artifacts are not cached by this
+app. These are instance-level safeguards, not a distributed rate limiter.
+
+The public deployment has already been checked against its configured RPC. For
+another deployment, verify an unpaid policy's discovery and proof preparation
+before publishing it: free public endpoints can reject historical log requests,
+and a successful build does not establish live RPC availability. If discovery
+fails, the dashboard leaves the policy unchanged, offers retry, and keeps the
+advanced proof-upload workflow available.
 
 ## Architecture
 
@@ -166,7 +273,7 @@ The adapter stores an authenticated transaction-envelope digest. It does not
 pretend that this digest is the Ethereum RPC transaction hash; the RPC hash is
 retained in off-chain evidence and worker artifacts.
 
-## Local setup
+## Local setup and verification
 
 The pinned toolchain is Node `24.14.0`, pnpm `11.22.0`, Foundry `1.7.1`, and
 Solidity `0.8.28`. The Foundry EVM target is London because CC3 testnet
@@ -178,6 +285,20 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm check
 ```
+
+To launch the dashboard locally after installing dependencies, expose the
+public v3 pool address and open `http://localhost:3000/?policy=1`:
+
+```bash
+export NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS=0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b
+pnpm --filter @pegshield/web exec next dev
+```
+
+Set server-only `ETHEREUM_RPC_URL` as well if you want the local automatic
+discovery and proof-preparation routes; the completed walkthrough works without
+a wallet or a private key.
+
+### Local verification
 
 Useful focused commands:
 
@@ -194,6 +315,7 @@ node worker/dist/cli.js proof simulate --policy <id> --first-file proofs/<first>
 # proof submit is permissionless but requires a locally configured relayer key:
 node worker/dist/cli.js proof submit --policy <id> --first-file proofs/<first>.json --confirmation-file proofs/<later>.json
 pnpm --filter @pegshield/web build
+pnpm --filter @pegshield/web e2e
 pnpm preflight:deployment
 pnpm demo:trigger -- --margin-bps 100
 ```
@@ -217,7 +339,8 @@ do not fill it in a commit. After deployment, `pnpm deploy:manifest` reads the
 broadcast receipts, verifies live roles/product/policy/code hashes, and writes
 the public manifest. Claim simulation and submission consume that manifest and
 the exact normalized proof artifact; no decoded price is accepted as input.
-Continuity proofs can age out as CC3's attestation/checkpoint window advances.
+Continuity proofs can age out as Attestcoin's accepted source-block window
+advances.
 Generate or batch-refresh both artifacts shortly before simulation; a locally
 cached JSON file is not evidence that its old continuity path remains valid.
 Use `pnpm demo:trigger -- --margin-bps 100` immediately before deployment to
@@ -231,18 +354,32 @@ receipt list, pass their independently verified hashes explicitly, for example:
 <buyPolicy-tx>`. The generator fetches and validates those receipts live before
 writing the manifest.
 
-## Trust and limitations
+## Trust, scope, and limitations
 
-PegShield trusts the public CC3 verifier dependencies, Ethereum receipt data,
-and underwriter-deposited TestUSD. It does not trust a relayer, browser state,
-caller-selected beneficiary, or caller-supplied price/round/timestamp. The
-prototype intentionally omits governance, upgrades, cancellation, refunds,
-cross-chain payout assets, pull-payment recovery for a beneficiary that rejects
-the payout token, and production economic parameters. Its depeg predicate is
-exactly two qualifying observations at least the configured interval apart; it
-does not prove that no recovery occurred between those observations. The live
-deployment and browser E2E evidence are complete. Public explorer and frontend
-links are provided separately with the release submission.
+### Depends on
+
+PegShield depends on the integrity and availability of the pinned Ethereum
+price feed, the public Attestcoin and CC3 verifier components, the TestUSD
+token behaving as documented, and sufficient TestUSD backing in the pool.
+
+### Does not trust during claims
+
+The claim path does not trust a relayer's word, browser state, or caller-
+supplied price, round, timestamp, feed, or transaction hash. A claimant cannot
+replace the beneficiary chosen at purchase. The authenticated receipt and all
+policy terms are checked on-chain.
+
+### Out of scope for this prototype
+
+Governance, upgrades, cancellation, refunds, cross-chain payout assets,
+pull-payment recovery for a beneficiary that rejects the payout token, and
+production economic parameters are intentionally omitted. The depeg predicate
+is exactly two qualifying observations at least the configured interval apart;
+it does not prove that no recovery occurred between those observations.
+
+Funded credentials and wallet-linked rehearsal evidence remain local and
+ignored. Public technical evidence is linked above in [Public evidence](#public-evidence);
+private planning and release notes are kept outside public history.
 
 ## License
 
