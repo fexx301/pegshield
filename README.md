@@ -75,6 +75,79 @@ about what happened.
   Attestcoin and CC3 currently recognize for proof verification. As this
   attestation window advances, older proof artifacts can expire.
 
+## Why Attestcoin
+
+An oracle can assert that USDC depegged. PegShield's payout is instead decided
+by the **Ethereum receipt of the Chainlink transmission itself** —
+inclusion-proven and continuity-anchored by the Attestcoin Protocol. Insurance
+replaces its trusted adjuster with an on-chain fact that no settlement operator
+can assert, alter, or withhold.
+
+The trust question matters more here than anywhere else in DeFi: a payout
+decided by an oracle operator has only moved the adjuster problem, not solved
+it. That operator can be wrong, gamed, or down at the exact moment a claim must
+settle. PegShield keeps the industry-grade price source (the pinned USDC/USD
+aggregator) but removes the assertion: the CC3 contract does not read what
+anyone _says_ the feed published — it verifies the receipt of what the feed
+_actually_ published, and derives the answer, round, and timestamp itself from
+the authenticated log. The relayer submits opaque proof bytes and cannot
+influence a single field of the decision.
+
+### What PegShield asks of the Protocol
+
+| Attestcoin component                            | Where                                                                | What it settles                                                                                               |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| BlockProver precompile `0x…FD2`                 | `AttestcoinVerifierAdapter.verifySourceLog` — the pool's only window | Ethereum transaction inclusion (Merkle) + chain continuity, per proof                                         |
+| EVM-v1 decoder `0x731c…9F9f` (code-hash pinned) | same adapter                                                         | receipt status, emitter, and the exact log at a bounds-checked position                                       |
+| ChainInfo precompile `0x…FD3`                   | deployment preflight                                                 | the dependency set is live and attesting before any broadcast                                                 |
+| Official proof service (batch + single)         | worker CLI and web claim service                                     | proof generation with a current continuity anchor; nearby events share one batch-refreshed anchor             |
+| Discovery lock (`docs/discovery-lock.json`)     | every consumer                                                       | chain IDs, official addresses, code hashes, event topic, and fixture are pinned — not configurable by callers |
+
+Two design consequences worth naming:
+
+**Two proofs, one transaction.** The claim predicate needs an ordered,
+interval-separated pair of qualifying observations. Submitting them separately
+would let a permissionless relayer pin an unusably late first observation and
+strand the policy. PegShield settles both proofs atomically — one CC3
+transaction (~835,000 gas on the live settlement) verifies inclusion,
+continuity, source chronology, threshold, coverage window, and replay status
+for both, then pays. Failed or maliciously ordered pairs leave the policy
+untouched.
+
+**Replay protection keys on attested identity, not RPC hashes.** Consumed
+events are keyed by the keccak of the authenticated envelope (chain key,
+attested transaction digest, log position, emitter, topic) — per policy, so
+distinct policies on the same product can independently settle the same source
+events, while no policy can ever pay twice on one event.
+
+### What we learned about the Attestcoin Protocol
+
+Operationally documented for the next team building on it:
+
+- A committed proof survived CC3 BlockProver verification **61 hours** after
+  generation, with the decoder and source-aggregator code hashes still pinned.
+- A single-proof continuity path was later **rejected as the attestation window
+  advanced** — while the authenticated transaction and Merkle data were
+  unchanged. A fresh batch request restored verification of the same round.
+- The rule we run by: **refresh both proofs immediately before settlement**; a
+  cached continuity path is not evidence it is still accepted. The web claim
+  path does this by design (batch-refreshed anchor, 90-second evidence
+  freshness window, re-simulation before every signature).
+
+### The boundary, stated precisely
+
+Attestcoin removes the _settlement-layer_ operator: no one standing between the
+Ethereum receipt and the CC3 payout can assert, alter, or withhold what the
+reference feed transmitted. It does not remove source-feed _quality_ trust: if
+the pinned aggregator publishes a wrong answer, the payout follows it, and the
+aggregation window between the two observations is not proven uninterrupted. If
+Chainlink reports a wrong price, PegShield still pays — deliberately. That is
+exactly how real parametric products work: they insure against a defined
+reference index, not against ground truth, and that definition is what makes
+the cover purchasable and the settlement determinable. Feed choice and window
+are product parameters we pin per policy at purchase and document rather than
+hide. That is the difference between a trust boundary and a trust claim.
+
 ## Start here: the user flow
 
 The public dashboard has three useful paths. They are intentionally separate so
