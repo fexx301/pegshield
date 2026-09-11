@@ -31,6 +31,10 @@ export const CC3_CHAIN: Chain = {
   testnet: true,
 };
 
+// The public release is v3. Historical v1/v2 manifests stay in the repository
+// as evidence, but must never be selected implicitly by claim tooling.
+export const DEFAULT_DEPLOYMENT_MANIFEST = "deployments/cc3-testnet-v3.json";
+
 export const CLAIM_ABI = [
   {
     type: "function",
@@ -63,6 +67,13 @@ type ClaimCall = {
   confirmationReceiptLogPosition: bigint;
   data: Hex;
 };
+
+export function resolveDeploymentManifestPath(repoRoot: string): string {
+  return resolve(
+    repoRoot,
+    process.env.DEPLOYMENT_MANIFEST ?? DEFAULT_DEPLOYMENT_MANIFEST,
+  );
+}
 
 export function parsePolicyId(value: string): bigint {
   if (!/^[1-9][0-9]*$/.test(value)) {
@@ -159,10 +170,7 @@ async function estimateClaimGas(options: {
 }
 
 export function resolvePoolAddress(repoRoot: string): Address {
-  const manifestPath = resolve(
-    repoRoot,
-    process.env.DEPLOYMENT_MANIFEST ?? "deployments/cc3-testnet.json",
-  );
+  const manifestPath = resolveDeploymentManifestPath(repoRoot);
   let manifest: DeploymentManifest | undefined;
   if (existsSync(manifestPath)) {
     try {
@@ -217,10 +225,7 @@ export async function assertPoolRuntime(
   repoRoot: string,
   poolAddress: Address,
 ): Promise<void> {
-  const manifestPath = resolve(
-    repoRoot,
-    process.env.DEPLOYMENT_MANIFEST ?? "deployments/cc3-testnet.json",
-  );
+  const manifestPath = resolveDeploymentManifestPath(repoRoot);
   if (!existsSync(manifestPath)) return;
   const manifest = JSON.parse(
     await readFile(manifestPath, "utf8"),

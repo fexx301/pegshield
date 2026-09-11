@@ -178,7 +178,7 @@ The repository also contains a reproducible offline core:
   live status is the settlement receipt linked under
   [Public evidence](#public-evidence).
 
-The current suites are 58 Foundry tests and 27 worker tests, including
+The current suites are 58 Foundry tests and 29 worker tests, including
 256-run invariants and an ERC-20 callback/reentrancy test, plus a web build
 and a local Playwright smoke test. Earlier recorded runs remain in
 [contract evidence](docs/evidence/P09-contract-gas.md),

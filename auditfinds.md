@@ -31,7 +31,8 @@ Severity counts: **0 critical / 0 high / 7 medium / 11 low / 8 info.**
 - **Where:** `.env.example:14`; `worker/src/cc3Client.ts:164,222`
 - **Evidence:** `DEPLOYMENT_MANIFEST=deployments/cc3-testnet.json` (v1) and the same v1 path is `cc3Client.ts`'s hardcoded fallback; README declares v3 the live deployment.
 - **Impact:** with `PEGSHIELD_POOL_ADDRESS` empty as shipped, the documented `proof simulate --policy 1` flow validates the code hash of, and simulates against, the superseded v1 pool, where policy 1 is a different, already-settled policy.
-- **Fix:** point the example at `deployments/cc3-testnet-v3.json`.
+- **Fix:** point the example at `deployments/cc3-testnet-v3.json` and make the
+  worker's implicit manifest fallback use the same v3 path.
 
 ### M4 — Worker: in-flight proof dedup breaks on request timeout
 - **Where:** `worker/src/server.ts:286-290` (eviction), `:260-261` (contradicting comment), `:266-270` (`withTimeout`), `:242-253` (4-slot `activeBuilds` cap)
@@ -154,15 +155,15 @@ delete-`_fixtureProof`-only). Status:
 |---|---|---|
 | M1 deploy env | Fixed (`300` + `DEPLOYMENT_MANIFEST_PATH` doc) | manual read |
 | M2 validator | Fixed (missing data exits 1; `--allow-missing` opt-out) | negative + 4 positive runs |
-| M3 env example | Fixed (v3 manifest) | manual read |
-| M4 dedup | Fixed (settlement-based eviction + cache-set) | new regression test fails on old code; 27/27 worker tests |
+| M3 env example | Fixed (v3 example + centralized worker fallback) | new manifest-selection regression tests; 29/29 worker tests |
+| M4 dedup | Fixed (settlement-based eviction + cache-set) | new regression test fails on old code; 29/29 worker tests |
 | M5 error mapping | Fixed (typed `WorkerError` codes; substring matching removed) | new mapping test fails on old code |
 | M6 policy pin | Fixed (one-time `autoPolicyId`) | **browser-verified live**: `nextPolicyId` response rewritten 7→8 during focus refetch; count updated to 7, selection stayed pinned at policy 06 |
 | M7 GET rate limit | Fixed (per-identity 20/min, 1024-identity cap, GET only) | unit tests incl. window expiry + identity cap |
 | L1 MAX_RETRIES | Removed | grep + tests |
 | L2 CLI flags | Fixed (reject `--` values, name in errors) | new CLI test |
 | L3 fileURLToPath | Fixed at all 6 sites | typecheck |
-| L4 test gaps | Added scanner/CLI/server tests (21→27) | mutated-filter test fails on `>=`→`>` regression |
+| L4 test gaps | Added scanner/CLI/server/manifest tests (21→29) | mutated-filter test fails on `>=`→`>` regression |
 | L5 header check | Dead arm removed with comment | live prover probe: batch entries carry only `txHash`/`txBytes`/`merkleProof` — no headerNumber to check |
 | L6 404 | Fixed (`PolicyNotFoundError` → 404) | unit test |
 | L7 file input | Fixed (value reset) | **browser-verified live**: same-path re-upload of corrupted file fired change, cleared stale artifact |
@@ -178,6 +179,16 @@ delete-`_fixtureProof`-only). Status:
 Final gate: `pnpm check` (format, lint, typecheck, all tests, builds, abi-check, all
 schema validations) passes end-to-end; Playwright e2e 4/4; live read-only preflight
 green including the adapter probe.
+
+### Follow-up correction (2026-09-11)
+
+A subsequent review reopened M3: the original fix changed `.env.example`, but
+the worker's implicit fallback in `cc3Client.ts` still selected the v1 manifest
+when `DEPLOYMENT_MANIFEST` was unset. The fallback is now centralized on the
+v3 manifest for both pool-address and runtime-hash checks, with explicit-default
+and override regression tests. The worker suite is now 29/29. Historical v1/v2
+manifests remain available as evidence and are no longer implicit claim-tooling
+defaults.
 
 ### Post-commit CI structure verification (same session)
 
