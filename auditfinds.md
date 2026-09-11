@@ -178,3 +178,31 @@ delete-`_fixtureProof`-only). Status:
 Final gate: `pnpm check` (format, lint, typecheck, all tests, builds, abi-check, all
 schema validations) passes end-to-end; Playwright e2e 4/4; live read-only preflight
 green including the adapter probe.
+
+### Post-commit CI structure verification (same session)
+
+Fresh-clone simulation of every CI job against the committed state, plus
+actionlint, surfaced two additional pre-existing issues (both **not** introduced
+by the fixes above, and both now fixed):
+
+1. **CI regression during the fix pass (introduced by my own L9 edit, caught by
+   external re-review):** the format-gate insertion accidentally replaced
+   `pnpm install --frozen-lockfile` in the typescript job, and the secret-scan
+   hardening accidentally deleted `status=$?`, making the gate fail open. Both
+   restored; secret-scan logic empirically verified (clean repo exits 0, planted
+   `PRIVATE_KEY=0x…` exits 1, spaced `= ` variant caught).
+2. **Pre-existing red pipeline on `origin/main`:** the `e2e-local` job has
+   failed on every run since `7fb1a20` (runs 34041602120…34517821896) because
+   the "automatic preparation" e2e spec renders the claim panel only when live
+   pool reads succeed — which requires `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS`.
+   Local runs pass via gitignored `web/.env.local`; CI never had it. Fixed by
+   setting the public v3 pool address as job-level env (build-time inlining
+   preserved). Verified by fresh-clone e2e simulation with the env: 4/4.
+
+The branch was also rebased onto `origin/main` (3 remote docs commits touched
+README.md and PegShieldDashboard.tsx); the README conflict was resolved keeping
+the remote's rewritten structure and re-applying the factual corrections
+(current test counts 58/27, manifest snapshot note) within it.
+
+Final verification of the rebased state: `pnpm check` green end-to-end,
+actionlint clean, Playwright e2e 4/4 in fresh-clone conditions.

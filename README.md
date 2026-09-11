@@ -34,12 +34,12 @@ or PegShield's server to choose the price or beneficiary.
 
 ### The trust boundary
 
-| Layer | Responsibility |
-| --- | --- |
-| **Ethereum** | Supplies the source observation: the pinned USDC/USD aggregator emits an `AnswerUpdated` event. |
-| **Attestcoin** | Authenticates each Ethereum receipt and anchors its source block in Attestcoin's accepted header history. |
-| **PegShield** | Reads the authenticated event and checks the policy terms: feed, topic, threshold, timing, replay status, and reserve. |
-| **Creditcoin CC3** | Enforces the decision on-chain and transfers the fixed TestUSD payout to the beneficiary stored in the policy. |
+| Layer              | Responsibility                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Ethereum**       | Supplies the source observation: the pinned USDC/USD aggregator emits an `AnswerUpdated` event.                        |
+| **Attestcoin**     | Authenticates each Ethereum receipt and anchors its source block in Attestcoin's accepted header history.              |
+| **PegShield**      | Reads the authenticated event and checks the policy terms: feed, topic, threshold, timing, replay status, and reserve. |
+| **Creditcoin CC3** | Enforces the decision on-chain and transfers the fixed TestUSD payout to the beneficiary stored in the policy.         |
 
 In one sentence: **Ethereum observes, Attestcoin proves, PegShield evaluates,
 and CC3 settles.** Attestcoin is pivotal because the CC3 contract can verify

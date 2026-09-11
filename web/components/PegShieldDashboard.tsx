@@ -836,7 +836,11 @@ export function PegShieldDashboard() {
               </div>
               <div className="console-big">1 → 3</div>
               <p className="console-sub">Ethereum event · CC3 settlement</p>
-              <div className="console-grid" role="list" aria-label="Trust boundary flow">
+              <div
+                className="console-grid"
+                role="list"
+                aria-label="Trust boundary flow"
+              >
                 <div className="console-cell" role="listitem">
                   <span className="mono-label">Ethereum</span>
                   <strong>Supplies observation</strong>
