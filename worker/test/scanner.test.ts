@@ -1,5 +1,21 @@
-import { describe, expect, it } from "vitest";
-import { decodeAnswerUpdatedLog } from "../src/eventScanner.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  decodeAnswerUpdatedLog,
+  scanAnswerUpdatedEvents,
+} from "../src/eventScanner.js";
+
+const { getLogs, getTransactionReceipt } = vi.hoisted(() => ({
+  getLogs: vi.fn(),
+  getTransactionReceipt: vi.fn(),
+}));
+
+vi.mock("viem", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    createPublicClient: () => ({ getLogs, getTransactionReceipt }),
+  };
+});
 
 const EMITTER = "0xc9e1a09622afdb659913fefe800feae5dbbfe9d7" as `0x${string}`;
 const TOPIC0 =
@@ -20,6 +36,15 @@ function log(overrides: Record<string, unknown> = {}) {
     logIndex: 516n,
     ...overrides,
   } as never;
+}
+
+function topicsFor(answer: bigint): `0x${string}`[] {
+  const encoded = answer < 0n ? (1n << 256n) + answer : answer;
+  return [
+    TOPIC0,
+    `0x${encoded.toString(16).padStart(64, "0")}`,
+    `0x${1166n.toString(16).padStart(64, "0")}`,
+  ];
 }
 
 describe("AnswerUpdated scanner boundary", () => {
@@ -69,5 +94,63 @@ describe("AnswerUpdated scanner boundary", () => {
         TOPIC0,
       ).answer,
     ).toBe("-1");
+  });
+});
+
+describe("scanAnswerUpdatedEvents", () => {
+  beforeEach(() => {
+    getLogs.mockReset();
+    getTransactionReceipt.mockReset();
+  });
+
+  it("rejects ranges wider than 10000 blocks before fetching logs", async () => {
+    await expect(
+      scanAnswerUpdatedEvents({ fromBlock: 0, toBlock: 10_001 }),
+    ).rejects.toThrow(/no larger than 10000 blocks/);
+    expect(getLogs).not.toHaveBeenCalled();
+  });
+
+  it("keeps answers strictly below the trigger and nothing equal to it", async () => {
+    const atTrigger = `0x${"33".repeat(32)}` as `0x${string}`;
+    const belowTrigger = `0x${"44".repeat(32)}` as `0x${string}`;
+    getLogs.mockResolvedValueOnce([
+      log({ topics: topicsFor(100n), transactionHash: atTrigger }),
+      log({ topics: topicsFor(99n), transactionHash: belowTrigger }),
+    ]);
+    getTransactionReceipt.mockResolvedValue({
+      status: "success",
+      logs: [{ logIndex: 516n, address: EMITTER }],
+    });
+
+    const events = await scanAnswerUpdatedEvents({
+      fromBlock: 25_881_094,
+      toBlock: 25_881_095,
+      triggerBelow: 100n,
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      transactionHash: belowTrigger,
+      answer: "99",
+      receiptLogPosition: 0,
+      receiptStatus: "success",
+    });
+    expect(getTransactionReceipt).toHaveBeenCalledTimes(1);
+  });
+
+  it("excludes zero and negative answers outright", async () => {
+    getLogs.mockResolvedValueOnce([
+      log({ topics: topicsFor(0n), transactionHash: `0x${"55".repeat(32)}` }),
+      log({ topics: topicsFor(-1n), transactionHash: `0x${"66".repeat(32)}` }),
+    ]);
+
+    const events = await scanAnswerUpdatedEvents({
+      fromBlock: 25_881_094,
+      toBlock: 25_881_095,
+      triggerBelow: 1_000n,
+    });
+
+    expect(events).toEqual([]);
+    expect(getTransactionReceipt).not.toHaveBeenCalled();
   });
 });

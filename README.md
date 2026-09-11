@@ -174,12 +174,18 @@ The repository also contains a reproducible offline core:
   [`worker/fixtures/historical-proof.json`](worker/fixtures/historical-proof.json),
   and [`deployments/cc3-testnet-v3.json`](deployments/cc3-testnet-v3.json).
 
-The latest recorded validation reports [62 Foundry tests](docs/evidence/P09-contract-gas.md),
-[21 worker tests](docs/evidence/P10-worker.md), invariant runs, an ERC-20
-callback/reentrancy test, a web build, and a local Playwright smoke test
-([browser evidence](docs/evidence/P17-e2e.md)). Run the commands in
+  Note: the manifest's `demoPolicy.state` is a deployment-time snapshot;
+  live status is the settlement receipt linked under
+  [Public evidence](#public-evidence).
+
+The current suites are 58 Foundry tests and 27 worker tests, including
+256-run invariants and an ERC-20 callback/reentrancy test, plus a web build
+and a local Playwright smoke test. Earlier recorded runs remain in
+[contract evidence](docs/evidence/P09-contract-gas.md),
+[worker evidence](docs/evidence/P10-worker.md), and
+[browser evidence](docs/evidence/P17-e2e.md). Run the commands in
 [Local verification](#local-verification) to reproduce them; counts
-may grow as the prototype changes.
+may change as the prototype evolves.
 
 ## Public evidence
 

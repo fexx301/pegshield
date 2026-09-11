@@ -11,7 +11,6 @@ export type WorkerConfig = {
   proofServiceUrl: string;
   ethereumRpcUrl?: string;
   requestTimeoutMs: number;
-  maxRetries: number;
   claimGasHeadroomBps: number;
 };
 
@@ -73,7 +72,6 @@ export function loadConfig(
       environment.REQUEST_TIMEOUT_MS,
       30_000,
     ),
-    maxRetries: positiveInt("MAX_RETRIES", environment.MAX_RETRIES, 2),
     claimGasHeadroomBps: gasHeadroomBps(environment.CLAIM_GAS_HEADROOM_BPS),
   };
 }

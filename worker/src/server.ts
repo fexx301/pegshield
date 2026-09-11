@@ -253,27 +253,37 @@ async function handleRequest(
     }
 
     state.activeBuilds += 1;
-    pending = runBuildWithTempDir(state, {
+    const build = runBuildWithTempDir(state, {
       transactionHash: proofRequest.transactionHash,
       receiptLogPosition: proofRequest.receiptLogPosition,
     });
-    // The active promise is never evicted. Deduplicated callers must all
-    // observe the same build and its cleanup path.
-    state.inFlight.set(cacheKey, pending);
+    state.inFlight.set(cacheKey, build);
+    // Cache population and in-flight eviction follow the build's own
+    // settlement, never an awaiting request's. A request that times out
+    // must leave the build in flight so retries join the same promise
+    // instead of spawning a duplicate that consumes another build slot.
+    const settle = () => {
+      if (state.inFlight.get(cacheKey) === build) {
+        state.inFlight.delete(cacheKey);
+      }
+    };
+    void build.then((result) => {
+      setCacheEntry(
+        cacheKey,
+        result.artifact,
+        state.cache,
+        state.now() + DEFAULT_CACHE_TTL_MS,
+        state.maxCacheEntries,
+      );
+      settle();
+    }, settle);
+    pending = build;
   }
-
   try {
     const result = await withTimeout(
       pending,
       state.requestTimeoutMs,
       "proof generation timed out",
-    );
-    setCacheEntry(
-      cacheKey,
-      result.artifact,
-      state.cache,
-      state.now() + DEFAULT_CACHE_TTL_MS,
-      state.maxCacheEntries,
     );
     sendJson(response, 200, {
       ok: true,
@@ -283,10 +293,6 @@ async function handleRequest(
     });
   } catch (error) {
     sendBuildFailure(response, error);
-  } finally {
-    if (state.inFlight.get(cacheKey) === pending) {
-      state.inFlight.delete(cacheKey);
-    }
   }
 }
 
@@ -345,8 +351,7 @@ function sendBuildFailure(response: ServerResponse, error: unknown): void {
     });
     return;
   }
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  if (message.includes("outside the receipt")) {
+  if (error instanceof WorkerError && error.code === "SOURCE_NOT_FOUND") {
     sendJson(response, 404, {
       ok: false,
       error: {
@@ -358,12 +363,7 @@ function sendBuildFailure(response: ServerResponse, error: unknown): void {
     });
     return;
   }
-  if (
-    message.includes("emitter") ||
-    message.includes("topic") ||
-    message.includes("receipt log shape") ||
-    message.includes("receipt status")
-  ) {
+  if (error instanceof WorkerError && error.code === "SOURCE_INELIGIBLE") {
     sendJson(response, 422, {
       ok: false,
       error: {

@@ -37,6 +37,12 @@ Read-only state reconciliation returned `1,002,500,000` accounted TestUSD,
 maximum premium BPS `9,999`. The validated public record is
 `deployments/cc3-testnet-v3.json`.
 
+Note: the state figures above and the `demoPolicy.state` recorded in the
+manifest are deployment-time snapshots taken before the policy-1 settlement.
+Live status is the settlement receipt linked from the README and
+`P28-live-atomic-settlement.md`; these records are kept as-is as deployment
+evidence.
+
 ## Fresh v3 observation and backup policies
 
 Policy 1 activated at Ethereum-time-compatible timestamp `1788504450`. The

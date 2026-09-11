@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { proofProvider } from "@gluwa/usc-sdk";
 import {
   createPublicClient,
@@ -14,6 +15,7 @@ import {
   loadConfig,
 } from "./config.js";
 import { readDiscoveryLock } from "./discoveryLock.js";
+import { WorkerError } from "./errors.js";
 import { canonicalize, sha256 } from "./proofArtifact.js";
 import { rawArtifactPath } from "./proofArtifact.js";
 import type { ProofArtifact } from "./types.js";
@@ -63,17 +65,23 @@ export async function buildProofArtifact(options: {
   outPath: string;
 }): Promise<{ artifact: ProofArtifact; proofPath: string; rawPath: string }> {
   if (!/^0x[0-9a-fA-F]{64}$/.test(options.transactionHash)) {
-    throw new Error("transactionHash must be a 32-byte hex hash");
+    throw new WorkerError(
+      "PROOF_INVALID",
+      "transactionHash must be a 32-byte hex hash",
+    );
   }
   if (
     !Number.isSafeInteger(options.receiptLogPosition) ||
     options.receiptLogPosition < 0
   ) {
-    throw new Error("receiptLogPosition must be a non-negative integer");
+    throw new WorkerError(
+      "PROOF_INVALID",
+      "receiptLogPosition must be a non-negative integer",
+    );
   }
 
   const config = loadConfig();
-  const repoRoot = dirname(dirname(dirname(new URL(import.meta.url).pathname)));
+  const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
   const lock = await readDiscoveryLock(`${repoRoot}/docs/discovery-lock.json`);
   const ethereumRpcUrl = config.ethereumRpcUrl;
   if (!ethereumRpcUrl)
@@ -89,20 +97,33 @@ export async function buildProofArtifact(options: {
     hash: options.transactionHash,
   });
   if (receipt.status !== "success")
-    throw new Error(`source receipt status is ${receipt.status}`);
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      `source receipt status is ${receipt.status}`,
+    );
   const log = receipt.logs[options.receiptLogPosition];
-  if (!log) throw new Error("receiptLogPosition is outside the receipt");
+  if (!log)
+    throw new WorkerError(
+      "SOURCE_NOT_FOUND",
+      "receiptLogPosition is outside the receipt",
+    );
   if (
     log.address.toLowerCase() !==
     lock.networks.ethereum.underlyingAggregator.toLowerCase()
   ) {
-    throw new Error("receipt log emitter does not match the locked aggregator");
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      "receipt log emitter does not match the locked aggregator",
+    );
   }
   if (
     log.topics[0]?.toLowerCase() !==
     lock.networks.ethereum.answerUpdatedTopic0.toLowerCase()
   ) {
-    throw new Error("receipt log topic does not match AnswerUpdated");
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      "receipt log topic does not match AnswerUpdated",
+    );
   }
   if (
     log.topics.length !== 3 ||
@@ -110,7 +131,10 @@ export async function buildProofArtifact(options: {
     !log.topics[2] ||
     log.data.length !== 66
   ) {
-    throw new Error("locked AnswerUpdated log shape is malformed");
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      "locked AnswerUpdated log shape is malformed",
+    );
   }
   const receiptBlockNumber = safeNumber(
     receipt.blockNumber,
@@ -131,21 +155,33 @@ export async function buildProofArtifact(options: {
   );
   const result = await builder.getProof(options.transactionHash);
   if (!result.success || !result.data)
-    throw new Error(result.error ?? "proof generation failed");
+    throw new WorkerError(
+      "PROOF_SERVICE_FAILED",
+      result.error ?? "proof generation failed",
+      { retryable: true },
+    );
   const proof = result.data;
   if (proof.chainKey !== ATTESTCOIN_CHAIN_KEY) {
-    throw new Error(
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
       `proof chain key ${proof.chainKey} does not match locked key ${ATTESTCOIN_CHAIN_KEY}`,
     );
   }
   if (proof.txHash.toLowerCase() !== options.transactionHash.toLowerCase()) {
-    throw new Error("proof service returned a different transaction hash");
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      "proof service returned a different transaction hash",
+    );
   }
   if (proof.headerNumber !== receiptBlockNumber) {
-    throw new Error("proof header does not match the Ethereum receipt block");
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
+      "proof header does not match the Ethereum receipt block",
+    );
   }
   if (proof.txIndex !== receiptTransactionIndex) {
-    throw new Error(
+    throw new WorkerError(
+      "SOURCE_INELIGIBLE",
       "proof transaction index does not match the Ethereum receipt",
     );
   }

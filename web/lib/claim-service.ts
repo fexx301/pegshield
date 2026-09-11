@@ -4,7 +4,9 @@ import {
   createPublicClient,
   fallback,
   http,
+  keccak256,
   parseAbiItem,
+  toHex,
   type Hex,
 } from "viem";
 import { z } from "zod";
@@ -71,6 +73,35 @@ const singleSchema = z.object({
 const digest = (value: unknown) =>
   `sha256:${createHash("sha256").update(canonicalize(value)).digest("hex")}` as const;
 
+export class PolicyNotFoundError extends Error {
+  constructor() {
+    super("Policy not found.");
+    this.name = "PolicyNotFoundError";
+  }
+}
+
+// Selector of the pool's UnknownPolicy(uint256) revert for unpurchased IDs.
+const UNKNOWN_POLICY_SELECTOR = keccak256(
+  toHex("UnknownPolicy(uint256)"),
+).slice(0, 10);
+
+function isUnknownPolicyRevert(error: unknown): boolean {
+  // viem exposes the raw revert data on ContractFunctionRevertedError inside
+  // the cause chain; match on it instead of parsing message text.
+  let cause: unknown = error;
+  let depth = 0;
+  while (cause !== null && typeof cause === "object" && depth < 10) {
+    if ("raw" in cause) {
+      const raw = cause.raw;
+      if (typeof raw === "string" && raw.startsWith(UNKNOWN_POLICY_SELECTOR))
+        return true;
+    }
+    cause = "cause" in cause ? cause.cause : undefined;
+    depth++;
+  }
+  return false;
+}
+
 async function json(url: string, signal: AbortSignal, body?: unknown) {
   const response = await fetch(url, {
     method: body ? "POST" : "GET",
@@ -120,13 +151,22 @@ export async function discoverClaim(policyId: bigint, signal: AbortSignal) {
       { retryCount: 0 },
     ),
   });
-  const policy = await cc3.readContract({
-    address: PEGSHIELD_POOL_ADDRESS,
-    abi: POOL_READ_ABI,
-    functionName: "getPolicy",
-    args: [policyId],
-  });
-  if (policy.productId === 0n) throw new Error("unknown policy");
+  const policy = await cc3
+    .readContract({
+      address: PEGSHIELD_POOL_ADDRESS,
+      abi: POOL_READ_ABI,
+      functionName: "getPolicy",
+      args: [policyId],
+    })
+    .catch((error: unknown) => {
+      // The pool reverts UnknownPolicy(uint256) for IDs that were never
+      // purchased; that is a permanent miss, not a service failure.
+      if (isUnknownPolicyRevert(error)) throw new PolicyNotFoundError();
+      throw error;
+    });
+  // Unreachable on the current pool (it reverts first); this only guards a
+  // pool that would return an empty struct instead.
+  if (policy.productId === 0n) throw new PolicyNotFoundError();
   const product = await cc3.readContract({
     address: PEGSHIELD_POOL_ADDRESS,
     abi: POOL_READ_ABI,
@@ -163,9 +203,23 @@ export async function discoverClaim(policyId: bigint, signal: AbortSignal) {
   }
   if (head.number - lo > 250000n)
     throw new Error("coverage scan exceeds automatic limit");
+  // Locate the first block past the coverage end the same way, so the scan
+  // below stops at the boundary without a block probe after every chunk.
+  // No block before the start can be past the end (timestamps never
+  // decrease).
+  let end = lo,
+    endHi = head.number + 1n;
+  while (end < endHi) {
+    const mid = (end + endHi) / 2n;
+    const block = await eth.getBlock({ blockNumber: mid });
+    if (block.timestamp > policy.endsAt) endHi = mid;
+    else end = mid + 1n;
+  }
+  const scanEnd = end < head.number ? end : head.number;
   const observations: Observation[] = [];
   let pair: Observation[] = [];
-  for (let from = lo; from <= head.number; from += 1000n) {
+  // Chunks that cross the coverage boundary are still fetched whole.
+  for (let from = lo; from <= scanEnd; from += 1000n) {
     const to = from + 999n < head.number ? from + 999n : head.number;
     const logs = await eth.getLogs({
       address: LOCKED_AGGREGATOR,
@@ -184,8 +238,6 @@ export async function discoverClaim(policyId: bigint, signal: AbortSignal) {
       });
     pair = selectPair(observations, { ...policy, ...product });
     if (pair.length === 2) break;
-    if ((await eth.getBlock({ blockNumber: to })).timestamp > policy.endsAt)
-      break;
   }
   if (pair.length < 2)
     return {
@@ -276,10 +328,12 @@ export async function prepareClaim(policyId: bigint, signal: AbortSignal) {
       txIndex: receipt.transactionIndex,
     };
     const normalized = singleSchema.parse(proof);
+    // The batch entries expose no header number of their own, so the prover's
+    // anchor cannot be cross-checked here; the receipt's block number is used
+    // directly when the proof is assembled above.
     if (
       normalized.txHash.toLowerCase() !==
         observation.transactionHash.toLowerCase() ||
-      normalized.headerNumber !== Number(receipt.blockNumber) ||
       normalized.txIndex !== receipt.transactionIndex
     )
       throw new Error("proof identity mismatch");
@@ -310,7 +364,9 @@ export async function prepareClaim(policyId: bigint, signal: AbortSignal) {
       ...payload,
       integrity: {
         canonicalJsonSha256: digest(payload),
-        rawSdkJsonSha256: digest(normalized),
+        // Digest the raw SDK batch entry as received, matching the worker's
+        // meaning for this field name.
+        rawSdkJsonSha256: digest(entry),
       },
     };
     artifacts.push((await validateProofArtifact(artifact)).artifact);

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, parse, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { keccak256, type Hex } from "viem";
 import { readDiscoveryLock } from "./discoveryLock.js";
 import type { EncodableProof, ProofArtifact } from "./types.js";
@@ -194,7 +195,7 @@ export async function readProofArtifact(path: string): Promise<ProofArtifact> {
   const parsed = JSON.parse(await readFile(path, "utf8")) as ProofArtifact;
   verifyArtifactIntegrity(parsed);
   const lock = await readDiscoveryLock(
-    new URL("../../docs/discovery-lock.json", import.meta.url).pathname,
+    fileURLToPath(new URL("../../docs/discovery-lock.json", import.meta.url)),
   );
   if (
     parsed.source.emitter.toLowerCase() !==

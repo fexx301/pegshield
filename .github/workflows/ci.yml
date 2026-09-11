@@ -2,6 +2,7 @@ name: PegShield CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -37,6 +38,7 @@ jobs:
           cache: pnpm
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:ts:check
       - run: pnpm --recursive lint
       - run: pnpm --recursive typecheck
       - run: pnpm --recursive test
@@ -61,7 +63,7 @@ jobs:
       - name: Secret scan
         run: |
           set +e
-          git grep -n -I -E '(PRIVATE_KEY=[^[:space:]]{8,}|mnemonic[[:space:]:=]|BEGIN [A-Z ]+ PRIVATE KEY)' -- ':!contracts/lib' ':!node_modules' ':!worker/dist' ':!.github/workflows/ci.yml'
+          git grep -n -I -E '(PRIVATE_KEY[[:space:]]*=[^[:space:]]{8,}|mnemonic[[:space:]:=]|BEGIN [A-Z ]+ PRIVATE KEY)' -- ':!contracts/lib' ':!node_modules' ':!worker/dist' ':!.github/workflows/ci.yml'
           status=$?
           set -e
           if [ "$status" -eq 0 ]; then

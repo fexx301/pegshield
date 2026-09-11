@@ -9,6 +9,23 @@ const DEFAULT_RPC = "https://rpc.cc3-testnet.creditcoin.network";
 const DEFAULT_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";
 const SOURCE_AGGREGATOR = "0xc9e1a09622afdb659913fefe800feae5dbbfe9d7";
 const repoRoot = resolve(new URL("..", import.meta.url).pathname);
+
+function foundryConfig() {
+  const text = readFileSync(
+    resolve(repoRoot, "contracts/foundry.toml"),
+    "utf8",
+  );
+  const value = (key) => {
+    const match = text.match(new RegExp(`^${key}\\s*=\\s*(.+)$`, "m"));
+    if (!match) throw new Error(`foundry.toml is missing ${key}`);
+    return match[1].trim().replace(/^["']|["']$/g, "");
+  };
+  return {
+    solc: value("solc_version"),
+    optimizerRuns: Number(value("optimizer_runs")),
+    evmVersion: value("evm_version"),
+  };
+}
 const require = createRequire(import.meta.url);
 const { createPublicClient, http, keccak256, toBytes } = require(
   resolve(repoRoot, "worker/node_modules/viem/_cjs/index.js"),
@@ -373,9 +390,7 @@ async function main() {
     },
     source: {
       gitCommit,
-      solc: "0.8.28",
-      optimizerRuns: 200,
-      evmVersion: "london",
+      ...foundryConfig(),
     },
     accounts: { deployer, underwriter, treasury, policyholder },
     roles: { defaultAdmin: underwriter, underwriter },

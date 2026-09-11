@@ -117,6 +117,7 @@ export function PegShieldDashboard() {
   const [coverage, setCoverage] = useState("100");
   const [beneficiary, setBeneficiary] = useState("");
   const [requestedPolicyId, setRequestedPolicyId] = useState<bigint>();
+  const [autoPolicyId, setAutoPolicyId] = useState<bigint>();
   const [purchaseStatus, setPurchaseStatus] = useState<
     | "idle"
     | "approving"
@@ -252,13 +253,21 @@ export function PegShieldDashboard() {
     livePolicyCount !== undefined && livePolicyCount > 1n
       ? livePolicyCount - 1n
       : undefined;
+  // Pin the automatic selection once, when the live policy count first
+  // yields a usable policy, so background refetches (for example another
+  // user's new purchase) cannot silently move the selection and wipe
+  // prepared claim evidence.
+  useEffect(() => {
+    if (autoPolicyId === undefined && latestPolicyId !== undefined)
+      setAutoPolicyId(latestPolicyId);
+  }, [autoPolicyId, latestPolicyId]);
   const selectedPolicyId =
     requestedPolicyId !== undefined &&
     livePolicyCount !== undefined &&
     requestedPolicyId > 0n &&
     requestedPolicyId < livePolicyCount
       ? requestedPolicyId
-      : (latestPolicyId ?? 1n);
+      : (autoPolicyId ?? 1n);
   const {
     data: productData,
     isPending: productPending,
@@ -633,6 +642,9 @@ export function PegShieldDashboard() {
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const file = event.target.files?.[0];
+    // Reset the input so re-selecting the same (for example fixed) file
+    // fires a change event again.
+    event.target.value = "";
     const setArtifact =
       stage === "first" ? setFirstClaimArtifact : setConfirmationClaimArtifact;
     const setArtifactName =

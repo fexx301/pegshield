@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { proofProvider } from "@gluwa/usc-sdk";
 import {
   createPublicClient,
@@ -379,7 +380,7 @@ async function generateArtifact(
 }
 
 async function main(): Promise<void> {
-  const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "../..");
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const cc3RpcUrl = env("CC3_RPC_URL", CC3_RPC_DEFAULT);
   if (process.argv.includes("--verify-only")) {
     await verifyArtifact(repoRoot, cc3RpcUrl);

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { readDiscoveryLock } from "./discoveryLock.js";
 import { WorkerError, stableError } from "./errors.js";
@@ -24,12 +25,17 @@ type JsonResult = Record<string, unknown>;
 
 function flag(argv: string[], name: string): string | undefined {
   const index = argv.indexOf(name);
-  return index < 0 ? undefined : argv[index + 1];
+  const value = index < 0 ? undefined : argv[index + 1];
+  // Never consume a following flag as this flag's value; requiredFlag then
+  // names the flag that is missing one.
+  if (value === undefined || value.startsWith("--")) return undefined;
+  return value;
 }
 
 function requiredFlag(argv: string[], name: string): string {
   const value = flag(argv, name);
-  if (!value) throw new WorkerError("CONFIG_INVALID", `${name} is required`);
+  if (!value)
+    throw new WorkerError("CONFIG_INVALID", `${name} requires a value`);
   return value;
 }
 
@@ -198,7 +204,7 @@ async function execute(argv: string[], repoRoot: string): Promise<JsonResult> {
 
 export async function runCli(
   argv: string[] = process.argv.slice(2),
-  repoRoot = resolve(new URL("../..", import.meta.url).pathname),
+  repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url))),
 ): Promise<number> {
   try {
     const result = await execute(argv, repoRoot);

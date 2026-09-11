@@ -3,12 +3,7 @@ pragma solidity 0.8.28;
 
 import { Script } from "forge-std/Script.sol";
 import { TestUSD } from "../src/TestUSD.sol";
-import {
-    AttestcoinVerifierAdapter,
-    MerkleProof,
-    MerkleProofEntry,
-    ContinuityProof
-} from "../src/AttestcoinVerifierAdapter.sol";
+import { AttestcoinVerifierAdapter } from "../src/AttestcoinVerifierAdapter.sol";
 import { PegShieldPool } from "../src/PegShieldPool.sol";
 import { Product } from "../src/PegShieldTypes.sol";
 
@@ -22,7 +17,6 @@ contract Deploy is Script {
     address internal constant BLOCK_PROVER = 0x0000000000000000000000000000000000000FD2;
     address internal constant DECODER = 0x731c345d79Fb8BbDC541f9DF3b6317585F849F9f;
     address internal constant SOURCE_AGGREGATOR = 0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7;
-    uint256 internal constant FIXTURE_SIBLING_COUNT = 9;
     bytes32 internal constant DECODER_CODE_HASH =
         0xb549c9d8eaf7d361192f8e363fe98717464441e2dd26e2b3bd1e0725df73a065;
 
@@ -155,45 +149,6 @@ contract Deploy is Script {
         if (!ok || data.length != 32 || abi.decode(data, (uint8)) != 2) {
             revert DependencyReadFailed(DECODER);
         }
-    }
-
-    /// @dev Foundry's JSON type parser accepts tuple arrays but not objects.
-    /// The committed SDK fixture is therefore read field-by-field, preserving
-    /// the exact proof tuple while failing closed if a required field is absent.
-    function _fixtureProof(string memory fixture)
-        internal
-        pure
-        returns (
-            uint64 chainKey,
-            uint64 height,
-            bytes memory encodedTransaction,
-            MerkleProof memory merkleProof,
-            ContinuityProof memory continuityProof
-        )
-    {
-        chainKey = _asUint64("fixture.chainKey", vm.parseJsonUint(fixture, ".proof.chainKey"));
-        height = _asUint64("fixture.headerNumber", vm.parseJsonUint(fixture, ".proof.headerNumber"));
-        encodedTransaction = vm.parseJsonBytes(fixture, ".proof.txBytes");
-        if (encodedTransaction.length == 0) revert DependencyReadFailed(BLOCK_PROVER);
-
-        MerkleProofEntry[] memory siblings = new MerkleProofEntry[](FIXTURE_SIBLING_COUNT);
-        for (uint256 i; i < FIXTURE_SIBLING_COUNT; ++i) {
-            string memory prefix =
-                string.concat(".proof.merkleProof.siblings[", vm.toString(i), "]");
-            siblings[i] = MerkleProofEntry({
-                hash: vm.parseJsonBytes32(fixture, string.concat(prefix, ".hash")),
-                isLeft: vm.parseJsonBool(fixture, string.concat(prefix, ".isLeft"))
-            });
-        }
-        merkleProof = MerkleProof({
-            root: vm.parseJsonBytes32(fixture, ".proof.merkleProof.root"), siblings: siblings
-        });
-        continuityProof = ContinuityProof({
-            lowerEndpointDigest: vm.parseJsonBytes32(
-                fixture, ".proof.continuityProof.lowerEndpointDigest"
-            ),
-            roots: vm.parseJsonBytes32Array(fixture, ".proof.continuityProof.roots")
-        });
     }
 
     function _product() internal view returns (Product memory) {

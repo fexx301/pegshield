@@ -8,9 +8,13 @@ const DEFAULT_RPC = "https://rpc.cc3-testnet.creditcoin.network";
 const DEFAULT_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";
 const repoRoot = resolve(new URL("..", import.meta.url).pathname);
 const require = createRequire(import.meta.url);
-const { createPublicClient, http, keccak256, encodeFunctionData } = require(
-  resolve(repoRoot, "worker/node_modules/viem/_cjs/index.js"),
-);
+const {
+  createPublicClient,
+  http,
+  keccak256,
+  encodeFunctionData,
+  encodeAbiParameters,
+} = require(resolve(repoRoot, "worker/node_modules/viem/_cjs/index.js"));
 const lock = JSON.parse(
   readFileSync(resolve(repoRoot, "docs/discovery-lock.json"), "utf8"),
 );
@@ -225,6 +229,87 @@ async function main() {
     });
   }
 
+  // Exercise the deployed adapter's compiled call path (verifySourceLog)
+  // against the live BlockProver precompile with the committed fixture.
+  // Unit tests bind a bytecode mock and Foundry cannot execute CC3 host
+  // precompiles, so this read-only probe is the only automated check of
+  // the deployed adapter -> precompile boundary.
+  const adapterAddress = process.env.ADAPTER_ADDRESS;
+  let adapterProbe = "skipped (ADAPTER_ADDRESS not set)";
+  if (adapterAddress) {
+    const adapterProbeData = encodeFunctionData({
+      abi: [
+        {
+          type: "function",
+          name: "verifySourceLog",
+          stateMutability: "view",
+          inputs: [
+            { name: "encodedProof", type: "bytes" },
+            { name: "receiptLogPosition", type: "uint256" },
+          ],
+          outputs: [{ name: "source", type: "bytes" }],
+        },
+      ],
+      functionName: "verifySourceLog",
+      args: [
+        // The adapter's encodedProof parameter is the ABI-encoded proof
+        // tuple itself (the same shape worker proofEncoder produces), not
+        // verify() calldata.
+        encodeAbiParameters(
+          [
+            { name: "chainKey", type: "uint64" },
+            { name: "height", type: "uint64" },
+            { name: "encodedTransaction", type: "bytes" },
+            {
+              name: "merkleProof",
+              type: "tuple",
+              components: [
+                { name: "root", type: "bytes32" },
+                {
+                  name: "siblings",
+                  type: "tuple[]",
+                  components: [
+                    { name: "hash", type: "bytes32" },
+                    { name: "isLeft", type: "bool" },
+                  ],
+                },
+              ],
+            },
+            {
+              name: "continuityProof",
+              type: "tuple",
+              components: [
+                { name: "lowerEndpointDigest", type: "bytes32" },
+                { name: "roots", type: "bytes32[]" },
+              ],
+            },
+          ],
+          proofArgs,
+        ),
+        BigInt(lock.fixture.receiptLogPosition),
+      ],
+    });
+    let probeResult;
+    try {
+      probeResult = await client.call({
+        to: adapterAddress,
+        data: adapterProbeData,
+      });
+    } catch (error) {
+      // A fixture whose continuity proof has aged out of CC3's attestation
+      // window fails here even on a healthy adapter: report it as stale
+      // evidence, not as a broken proof boundary.
+      fail("adapter fixture probe failed (fixture continuity may be stale)", {
+        adapterAddress,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (!probeResult.data || probeResult.data === "0x") {
+      fail("adapter fixture probe returned no data", { adapterAddress });
+    }
+    adapterProbe = "verified (fixture authenticated through deployed adapter)";
+  }
+
   const manifestPath = resolve(
     repoRoot,
     process.env.DEPLOYMENT_MANIFEST ?? "deployments/cc3-testnet.json",
@@ -238,6 +323,7 @@ async function main() {
         latestAttestationHeight: chainInfo.height.toString(),
         blockProverFixtureVerified: true,
         decoderType,
+        adapterProbe,
         deploymentManifestPresent: existsSync(manifestPath),
         next: existsSync(manifestPath)
           ? `validate ${manifestPath.replace(`${repoRoot}/`, "")} and compare runtime hashes`
@@ -249,4 +335,8 @@ async function main() {
   );
 }
 
-main().catch(() => fail("deployment preflight failed", {}));
+main().catch((error) =>
+  fail("deployment preflight failed", {
+    message: error instanceof Error ? error.message : String(error),
+  }),
+);

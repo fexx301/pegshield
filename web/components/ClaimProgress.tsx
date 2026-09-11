@@ -83,7 +83,7 @@ export function ClaimProgress({
 
   useEffect(() => {
     if (!enabled) return;
-    void run(false);
+    if (!submitting) void run(false);
     const timer = setInterval(() => {
       if (
         !submitting &&

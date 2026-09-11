@@ -161,22 +161,75 @@ for (const expected of poolExpected) assertFunction(poolAbi, expected);
 for (const expected of claimExpected) assertFunction(poolAbi, expected);
 assertFunction(adapterAbi, adapterExpected);
 
-const webSource = readFileSync(resolve(repoRoot, "web/lib/chain.ts"), "utf8");
-for (const expected of poolExpected) {
-  const name = expected.signature.slice(0, expected.signature.indexOf("("));
-  if (!webSource.includes(`name: "${name}"`)) {
-    throw new Error(`web ABI is missing ${name}`);
+// The TS-side ABI constants are the source of truth for what the web and
+// worker actually encode, so parse them out of the module text instead of
+// trusting a name substring to appear somewhere in the file. Each export is
+// a `const X = [ ... ] as const;` array of viem ABI entries.
+function extractAbiExport(source, exportName) {
+  const anchor = source.indexOf(`const ${exportName} = [`);
+  if (anchor < 0) throw new Error(`ABI export ${exportName} not found`);
+  let depth = 0;
+  let end = -1;
+  for (
+    let i = anchor + `const ${exportName} = `.length;
+    i < source.length;
+    i++
+  ) {
+    const ch = source[i];
+    if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) throw new Error(`ABI export ${exportName} is malformed`);
+  const body = source.slice(anchor + `const ${exportName} = `.length, end + 1);
+  return eval(`(${body})`);
+}
+
+function assertTsAbiEntry(abi, expected, label) {
+  const entry = abi.find(
+    (candidate) =>
+      candidate.type === "function" &&
+      signature(candidate) === expected.signature,
+  );
+  if (!entry) throw new Error(`${label} ABI is missing ${expected.signature}`);
+  if (entry.stateMutability !== expected.stateMutability) {
+    throw new Error(`${label} ABI mutability drift for ${expected.signature}`);
+  }
+  const actualInputs = (entry.inputs ?? []).map(tupleTypes);
+  const actualOutputs = (entry.outputs ?? []).map(tupleTypes);
+  if (JSON.stringify(actualInputs) !== JSON.stringify(expected.inputs)) {
+    throw new Error(`${label} ABI input drift for ${expected.signature}`);
+  }
+  if (JSON.stringify(actualOutputs) !== JSON.stringify(expected.outputs)) {
+    throw new Error(`${label} ABI output drift for ${expected.signature}`);
   }
 }
+
+const webSource = readFileSync(resolve(repoRoot, "web/lib/chain.ts"), "utf8");
+const webAbi = [
+  ...extractAbiExport(webSource, "POOL_READ_ABI"),
+  ...extractAbiExport(webSource, "POOL_WRITE_ABI"),
+  ...extractAbiExport(webSource, "CLAIM_WRITE_ABI"),
+];
+for (const expected of poolExpected) {
+  assertTsAbiEntry(webAbi, expected, "web");
+}
+for (const expected of claimExpected) {
+  assertTsAbiEntry(webAbi, expected, "web");
+}
+
 const workerSource = readFileSync(
   resolve(repoRoot, "worker/src/cc3Client.ts"),
   "utf8",
 );
+const workerAbi = extractAbiExport(workerSource, "CLAIM_ABI");
 for (const expected of claimExpected) {
-  const name = expected.signature.slice(0, expected.signature.indexOf("("));
-  if (!workerSource.includes(`name: "${name}"`)) {
-    throw new Error(`worker ABI is missing ${name}`);
-  }
+  assertTsAbiEntry(workerAbi, expected, "worker");
 }
 
 console.log(

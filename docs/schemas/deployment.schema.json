@@ -110,7 +110,7 @@
         "policyDuration": { "type": "integer", "minimum": 1 },
         "claimGracePeriod": { "type": "integer", "minimum": 1 },
         "minBreachDuration": { "type": "integer", "minimum": 1 },
-        "premiumBps": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "premiumBps": { "type": "integer", "minimum": 1, "maximum": 9999 },
         "maxCoveragePerPolicy": { "$ref": "#/$defs/decimalPositive" },
         "demoOnly": { "const": true }
       }

@@ -1,4 +1,8 @@
-import { discoverClaim, prepareClaim } from "../../../../lib/claim-service";
+import {
+  discoverClaim,
+  PolicyNotFoundError,
+  prepareClaim,
+} from "../../../../lib/claim-service";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -6,6 +10,36 @@ export const dynamic = "force-dynamic";
 let active = 0;
 const pending = new Map<string, Promise<unknown>>();
 const cache = new Map<string, { until: number; value: unknown }>();
+// In-memory, per-instance rate limiting for public GET discovery — not a
+// distributed rate limiter, matching the README's stance on instance limits.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const RATE_LIMIT_MAX_IDENTITIES = 1024;
+const requestsByIdentity = new Map<string, number[]>();
+
+function allowGet(request: Request): boolean {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const identity = forwarded?.split(",")[0]?.trim() || "local";
+  const now = Date.now();
+  if (
+    requestsByIdentity.size >= RATE_LIMIT_MAX_IDENTITIES &&
+    !requestsByIdentity.has(identity)
+  ) {
+    // Evict identities whose whole window has expired before rejecting new
+    // ones at the bounded-map cap.
+    for (const [key, stamps] of requestsByIdentity)
+      if (stamps.every((stamp) => now - stamp >= RATE_LIMIT_WINDOW_MS))
+        requestsByIdentity.delete(key);
+    if (requestsByIdentity.size >= RATE_LIMIT_MAX_IDENTITIES) return false;
+  }
+  const stamps = (requestsByIdentity.get(identity) ?? []).filter(
+    (stamp) => now - stamp < RATE_LIMIT_WINDOW_MS,
+  );
+  if (stamps.length >= RATE_LIMIT_MAX_REQUESTS) return false;
+  stamps.push(now);
+  requestsByIdentity.set(identity, stamps);
+  return true;
+}
 
 async function handle(
   request: Request,
@@ -24,6 +58,13 @@ async function handle(
     return reply(
       { error: "Prepare claims from the PegShield dashboard." },
       403,
+    );
+  if (request.method === "GET" && !allowGet(request))
+    return reply(
+      {
+        error: "Too many policy checks. Please wait a minute and try again.",
+      },
+      429,
     );
   const key = `${request.method}:${policyId}`;
   const cached = cache.get(key);
@@ -53,11 +94,14 @@ async function handle(
   try {
     const value = await job;
     if (request.method === "GET") {
+      cache.delete(key); // Re-set keys move to the end (LRU-ish eviction).
       if (cache.size >= 100) cache.delete(cache.keys().next().value!);
       cache.set(key, { until: Date.now() + 30000, value });
     }
     return reply(value);
   } catch (error) {
+    if (error instanceof PolicyNotFoundError)
+      return reply({ error: "Policy not found." }, 404);
     // Do not return upstream exceptions: RPC URLs may contain credentials.
     // Keep a redacted first-line diagnostic in platform logs for operators.
     // The client still receives the same recovery-safe message.

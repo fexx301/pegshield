@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import {
   createPublicClient,
   http,
@@ -129,7 +130,7 @@ export async function scanAnswerUpdatedEvents(options: {
   }
   const config = loadConfig();
   const lock = await readDiscoveryLock(
-    new URL("../../docs/discovery-lock.json", import.meta.url).pathname,
+    fileURLToPath(new URL("../../docs/discovery-lock.json", import.meta.url)),
   );
   const client = createPublicClient({
     chain: {

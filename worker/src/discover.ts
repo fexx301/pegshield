@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { proofProvider } from "@gluwa/usc-sdk";
 import {
   createPublicClient,
@@ -214,7 +215,7 @@ async function main(): Promise<void> {
   const ethereumRpcUrl = env("ETHEREUM_RPC_URL");
   const proofUrl = env("ATTESTCOIN_PROVER_URL", PROOF_URL_DEFAULT);
   const now = new Date().toISOString();
-  const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "../..");
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const discoveryGitCommit = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: repoRoot,
     encoding: "utf8",
