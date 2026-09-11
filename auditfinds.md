@@ -217,3 +217,30 @@ the remote's rewritten structure and re-applying the factual corrections
 
 Final verification of the rebased state: `pnpm check` green end-to-end,
 actionlint clean, Playwright e2e 4/4 in fresh-clone conditions.
+
+## Post-audit live run (2026-09-11, v4 deployment)
+
+A fresh v4 deployment was executed to produce current-dated settlement
+evidence for the hackathon (v3 policies 2–6 expired unclaimed at 13:18 UTC).
+The run surfaced one new operational finding, documented in
+`docs/evidence/P29-v4-deployment.md`:
+
+- **CC3 `eth_estimateGas` is intermittently unstable.** The forge broadcast's
+  `fundPool` transaction was sent with a 110,352-gas limit that exactly
+  equaled its consumption (out of gas), while a fresh estimate for the same
+  call returned 226,245. This also retroactively explains the day's earlier
+  worker `proof simulate` failure on v3 policy 2: both proof artifacts were
+  independently verified valid through the deployed adapter; the failure was
+  in the estimation path. `forge --resume` could not recover (re-sent the
+  identical reverted transaction); the documented manual path
+  (`cast send --gas-limit`, explicit `--product-tx-hash`/`--policy-tx-hash`
+  to the manifest generator) completed the deployment.
+
+Recommended hardening (not applied in this session): default the worker's
+claim submission to an explicit gas floor with estimate-only headroom, and
+surface `estimateGas` failures distinctly from proof-verification failures.
+
+v4 state: pool `0x53712c0c…`, adapter `0x07a87e5a…`, TestUSD
+`0xf79caedf…`; product 1 trigger `100983312`; policy 1 Active with window
+1789139985–1789744785; manifest `deployments/cc3-testnet-v4.json`
+(schema-valid, live-verified). Claim pending two qualifying oracle rounds.
