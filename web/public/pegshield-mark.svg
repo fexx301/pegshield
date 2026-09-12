@@ -1,59 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" role="img" aria-labelledby="pegshield-mark-title pegshield-mark-desc">
-  <title id="pegshield-mark-title">PegShield</title>
-  <desc id="pegshield-mark-desc">A shield surrounding a verified price signal.</desc>
-  <defs>
-    <linearGradient id="shield-core" x1="42" y1="35" x2="208" y2="225" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0B2D68" />
-      <stop offset="0.52" stop-color="#071A42" />
-      <stop offset="1" stop-color="#040F29" />
-    </linearGradient>
-    <linearGradient id="signal-blue" x1="36" y1="47" x2="130" y2="238" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2C8BFF" />
-      <stop offset="1" stop-color="#0D57D5" />
-    </linearGradient>
-    <linearGradient id="signal-cyan" x1="214" y1="66" x2="150" y2="209" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#12F4E2" />
-      <stop offset="1" stop-color="#00BFC8" />
-    </linearGradient>
-    <linearGradient id="signal-line" x1="67" y1="132" x2="189" y2="132" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#1478F4" />
-      <stop offset="0.5" stop-color="#14E8D1" />
-      <stop offset="1" stop-color="#1478F4" />
-    </linearGradient>
-  </defs>
-
-  <path d="M128 20 224 70v54c0 53-31 94-96 121-65-27-96-68-96-121V70l96-50Z" fill="url(#shield-core)" stroke="#03102D" stroke-width="8" stroke-linejoin="round" />
-  <path d="M128 20 224 70v54c0 53-31 94-96 121-65-27-96-68-96-121V70l96-50Z" stroke="#F7FAFF" stroke-width="18" stroke-linejoin="round" />
-
-  <path d="M37 70 128 22" stroke="url(#signal-blue)" stroke-width="18" stroke-linecap="butt" />
-  <path d="m128 22 91 48" stroke="#F7FAFF" stroke-width="18" stroke-linecap="butt" />
-  <path d="M219 70v54c0 19-5 37-13 52" stroke="url(#signal-cyan)" stroke-width="18" stroke-linecap="butt" />
-  <path d="M206 176c-18 31-45 52-78 67" stroke="#F7FAFF" stroke-width="18" stroke-linecap="butt" />
-  <path d="M128 243c-33-15-60-36-78-67" stroke="url(#signal-blue)" stroke-width="18" stroke-linecap="butt" />
-  <path d="M50 176c-8-15-13-33-13-52V70" stroke="#F7FAFF" stroke-width="18" stroke-linecap="butt" />
-
-  <path d="m128 38 20 11.5v23L128 84l-20-11.5v-23L128 38Z" fill="#F7FAFF" />
-  <path d="m128 51 8 4.6v10.8l-8 4.6-8-4.6V55.6l8-4.6Z" fill="url(#signal-blue)" />
-
-  <circle cx="128" cy="132" r="57" stroke="url(#signal-blue)" stroke-width="7" stroke-linecap="round" stroke-dasharray="70 22 35 23" />
-  <circle cx="128" cy="132" r="42" stroke="url(#signal-cyan)" stroke-width="6" stroke-linecap="round" stroke-dasharray="58 24 39 31" />
-
-  <g fill="#12E4A9">
-    <circle cx="128" cy="81" r="4" />
-    <circle cx="111" cy="84" r="4" />
-    <circle cx="97" cy="92" r="4" />
-    <circle cx="159" cy="84" r="4" />
-    <circle cx="174" cy="93" r="4" />
-    <circle cx="97" cy="172" r="4" />
-    <circle cx="111" cy="180" r="4" />
-    <circle cx="128" cy="183" r="4" />
-    <circle cx="145" cy="180" r="4" />
-    <circle cx="159" cy="172" r="4" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-labelledby="pegshield-mark-title pegshield-mark-desc" color="#38BDF8">
+  <title id="pegshield-mark-title">PegShield logo</title>
+  <desc id="pegshield-mark-desc">An offset circular peg held within two calibrated containment brackets.</desc>
+  <!-- Change currentColor in CSS to use the mark on any solid background. -->
+  <g fill="currentColor">
+    <!-- Left containment bracket -->
+    <path d="M220 140h170c28 0 50 22 50 50v57c-77 39-120 105-120 188v130c0 83 43 149 120 188v57c0 28-22 50-50 50H220c-28 0-50-22-50-50V190c0-28 22-50 50-50Z"/>
+    <!-- Right containment bracket: a 96-unit stop plane sits 50 units from the core. -->
+    <path d="M610 140h170c28 0 50 22 50 50v620c0 28-22 50-50 50H610c-28 0-50-22-50-50v-57c58-31 90-84 90-158v-17c0-13 20-17 20-30v-96c0-13-20-17-20-30v-17c0-74-32-127-90-158v-57c0-28 22-50 50-50Z"/>
+    <!-- Stable asset displaced toward the calibrated stop. Gap: 50 units (one-third bracket stroke). -->
+    <circle cx="540" cy="500" r="80"/>
   </g>
-
-  <path d="M65 132h126" stroke="#041535" stroke-width="14" stroke-linecap="round" />
-  <path d="M65 132h126" stroke="url(#signal-line)" stroke-width="7" stroke-linecap="round" />
-  <circle cx="65" cy="132" r="12" fill="#12E4A9" stroke="#041535" stroke-width="5" />
-  <circle cx="191" cy="132" r="12" fill="#12E4A9" stroke="#041535" stroke-width="5" />
-  <circle cx="128" cy="132" r="20" fill="#F8FAFF" stroke="#041535" stroke-width="5" />
 </svg>

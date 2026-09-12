@@ -66,15 +66,27 @@ survive the tail event.
 Web3, DeFi, Attestcoin Protocol, Creditcoin, RWA (beneficiary-as-lending-market
 framing earns it), Security.
 
-## Demo video script (3 minutes, if recording)
+## Demo video script (~3:20, relaxed pace)
 
-1. Buy coverage on the dashboard (premium quote from the live pool).
-2. Show the policy: fixed coverage, locked beneficiary, window.
-3. Show the two Ethereum source events on Etherscan.
-4. "One transaction on CC3": walk the atomic claim — Attestcoin verifies both
-   receipts, the pool checks everything, the payout lands.
-5. Close on the trust boundary: "The relayer submitted bytes. The contract
-   decided." Link the receipt.
+Record the screen silently first, then narrate over it in segments — never
+talk while clicking. On-screen captions carry the hashes and numbers; never
+read a hex string aloud. Every narration line below is under 10 seconds at a
+walking pace; static screens (segments 8–9) are free time.
+
+| #   | On screen (record silently)                        | Narration                                                                                                                                                                                                                                                                                                                 |
+| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Dashboard hero, slow scroll                        | Insurance claims wait on a decision-maker. In traditional insurance, that's an adjuster. In most on-chain products, it's an oracle operator. Either way — someone tells the contract what happened.                                                                                                                       |
+| 2   | Click "Explore a completed payout"                 | PegShield removes the decider. Here's a policy that already paid out — I'll show you exactly how the money moved.                                                                                                                                                                                                         |
+| 3   | Step 1: purchase terms                             | The user bought one hundred TestUSD of coverage for a two-point-five TestUSD premium. The beneficiary was locked at purchase — nobody can change it later.                                                                                                                                                                |
+| 4   | Step 2: both Etherscan txs (5s each)               | The trigger is the real Ethereum USDC price feed. Two updates landed below the threshold — this one, and a confirmation, an hour apart.                                                                                                                                                                                   |
+| 5   | Step 3: verification panel                         | Anyone can submit — it's permissionless. Both proofs went in as a single transaction, and Creditcoin verified the Ethereum receipts themselves: inclusion, continuity, the exact log.                                                                                                                                     |
+| 6   | Step 4: payout transfer on Blockscout              | The pool checked every policy term, then paid the exact coverage to the locked beneficiary. One transaction. No adjuster. No operator.                                                                                                                                                                                    |
+| 7   | v4 receipt (Blockscout 0x575030ff…), scroll events | And this isn't a one-off — we ran the same flow end to end: purchased at 8:01, claimed at 8:15 the same morning. Here's the receipt: breach observed, confirmation observed, policy paid, token transferred. The accounting balances to the wei.                                                                          |
+| 8   | Deck slide 5 (integration map), static             | Why does this need Attestcoin? An oracle can _assert_ that USDC depegged. This contract verifies the _receipt_ of what the aggregator actually published — inclusion-proven, continuity-anchored. The adjuster becomes an on-chain fact. That's PegShield: buy fixed coverage, prove the depeg twice, let Creditcoin pay. |
+| 9   | End card: repo + receipt URLs                      | (no narration)                                                                                                                                                                                                                                                                                                            |
+
+To hit 3:00 exactly: cut segment 4's Etherscan visits (keep the narration) and
+shorten segment 7 to the event list only.
 
 ## Submission checklist
 
