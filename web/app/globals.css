@@ -375,10 +375,14 @@ a {
   transform-origin: center;
   transition: transform var(--dur-short) var(--ease-out);
 }
-.mobile-nav-toggle[aria-expanded="true"] .mobile-nav-toggle-icon span:first-child {
+.mobile-nav-toggle[aria-expanded="true"]
+  .mobile-nav-toggle-icon
+  span:first-child {
   transform: translateY(2.5px) rotate(45deg);
 }
-.mobile-nav-toggle[aria-expanded="true"] .mobile-nav-toggle-icon span:last-child {
+.mobile-nav-toggle[aria-expanded="true"]
+  .mobile-nav-toggle-icon
+  span:last-child {
   transform: translateY(-2.5px) rotate(-45deg);
 }
 .wallet-button {
