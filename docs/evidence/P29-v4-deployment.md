@@ -78,3 +78,33 @@ later confirmation at least 300 seconds apart. Feed cadence is irregular
 (observed 1h–23h between rounds); the settlement will be documented here and
 in the README once submitted with an explicit gas limit by the permissionless
 relayer.
+
+## Pre-claim dry run: shared-anchor batch proofs rejected for distant blocks
+
+Before the live claim, the full preparation pipeline (receipts → prover batch
+→ artifact integrity → adapter `verifySourceLog`) was dry-run end-to-end
+against historical rounds 1185/1186. The dry run caught a deterministic
+proof-construction failure:
+
+- Requesting one `proof-batch-by-tx` for **both** transactions (the
+  web claim service's "nearby events" path) returned a single shared
+  continuity anchor (371 roots). The earlier round's proof verified, but the
+  **later round's proof was rejected by the live BlockProver with "Merkle
+  root mismatch"** — reproducible across four retries, so not node flake.
+- Requesting **one single-item batch per transaction** gave each proof its
+  own anchored continuity path (71 and 76 roots respectively), and both
+  verified through the deployed v4 adapter's compiled `verifySourceLog`.
+
+This is the same behavior the deployed web claim service encodes as its
+distance rule, now confirmed empirically at the protocol level: a shared
+batch continuity path is not valid for arbitrary block distances, only for
+nearby headers. The claim pipeline therefore builds each proof from its own
+single-item batch, verifies both through the adapter before submission, and
+refuses to proceed if either fails.
+
+The dry run also hardened two smaller construction details: the watcher's
+pairing logic now scans all round pairs (not just the first two, which could
+miss a valid later pair when the first two land within the 300-second
+interval), and artifact construction rounds the observed answer to the
+nearest integer before comparing it to the indexed topic (a raw float
+conversion can be non-integral and throw).
