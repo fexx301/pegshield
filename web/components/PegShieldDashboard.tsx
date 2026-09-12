@@ -49,6 +49,13 @@ const SOURCE_EXPLORER = "https://etherscan.io/tx";
 const SOURCE_TX =
   "0x60f65e8b0b14daf28495f367ed8f46ade4ebabec4e4b13c86a3f55a7b2f34245";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+const HEADER_SECTION_LINKS = [
+  { href: "#pool", label: "Pool", detail: "Visible reserves" },
+  { href: "#product", label: "Product", detail: "Coverage terms" },
+  { href: "#policy", label: "Policy", detail: "Claim lifecycle" },
+  { href: "#evidence", label: "Evidence", detail: "Proof snapshot" },
+  { href: "#trust", label: "Trust model", detail: "Protocol boundaries" },
+] as const;
 
 type ProductRead = {
   chainKey: bigint;
@@ -143,11 +150,29 @@ export function PegShieldDashboard() {
   >("idle");
   const [claimError, setClaimError] = useState<string>();
   const [proofPreparedAt, setProofPreparedAt] = useState<number>();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 10000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest(".topbar")) {
+        setMobileNavOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [mobileNavOpen]);
   const { address, chainId, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -739,34 +764,108 @@ export function PegShieldDashboard() {
             />
             <span>PegShield</span>
           </a>
-          <nav className="nav-links" aria-label="Primary navigation">
-            <a href="#pool">Pool</a>
-            <a href="#product">Product</a>
-            <a href="#policy">Policy</a>
-            <a href="#evidence">Evidence</a>
-            <a href="#trust">Trust model</a>
-          </nav>
+          <a className="header-shortcut" href="#completed-payout">
+            <span className="header-shortcut-label">Demo path</span>
+            <span>Follow a completed payout</span>
+          </a>
           <div className="topbar-actions">
-            <span className="network-pill">CC3 · 102031</span>
-            <span className="status-pill">TESTNET</span>
+            <span
+              className="environment-pill"
+              role="status"
+              aria-label="CC3 testnet, chain 102031"
+            >
+              <span className="environment-dot" aria-hidden="true" />
+              <span>CC3</span>
+              <span className="environment-status">TESTNET</span>
+              <span className="environment-id" aria-hidden="true">
+                · 102031
+              </span>
+            </span>
             <button
-              className="button secondary"
+              className="mobile-nav-toggle"
+              type="button"
+              aria-controls="mobile-nav"
+              aria-expanded={mobileNavOpen}
+              aria-label={
+                mobileNavOpen ? "Close page navigation" : "Open page navigation"
+              }
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              <span className="mobile-nav-toggle-icon" aria-hidden="true">
+                <span />
+                <span />
+              </span>
+              <span className="mobile-nav-toggle-label">
+                {mobileNavOpen ? "Close" : "Map"}
+              </span>
+            </button>
+            <button
+              className="button secondary wallet-button"
               type="button"
               title={connected ? address : undefined}
-              aria-label={connected ? `Connected wallet ${address}` : undefined}
+              aria-label={
+                wrongNetwork
+                  ? "Switch wallet to CC3 testnet"
+                  : connected
+                    ? `Disconnect wallet ${address}`
+                    : "Connect wallet"
+              }
               onClick={() => {
                 if (wrongNetwork) switchChain({ chainId: CC3_TESTNET.id });
                 else if (isConnected) disconnect();
                 else connect({ connector: connectors[0] ?? injected() });
               }}
             >
-              {wrongNetwork
-                ? "Switch to CC3"
-                : connected
-                  ? `${address?.slice(0, 6)}…${address?.slice(-4)}`
-                  : "Connect wallet"}
+              <span
+                className="wallet-label wallet-label-full"
+                aria-hidden="true"
+              >
+                {wrongNetwork
+                  ? "Switch to CC3"
+                  : connected
+                    ? `${address?.slice(0, 6)}…${address?.slice(-4)}`
+                    : "Connect wallet"}
+              </span>
+              <span
+                className="wallet-label wallet-label-compact"
+                aria-hidden="true"
+              >
+                {wrongNetwork
+                  ? "CC3"
+                  : connected
+                    ? `${address?.slice(0, 4)}…`
+                    : "Connect"}
+              </span>
             </button>
           </div>
+          {mobileNavOpen ? (
+            <nav
+              id="mobile-nav"
+              className="mobile-nav"
+              aria-label="Page sections"
+            >
+              <div className="mobile-nav-meta">
+                <span className="mobile-nav-kicker">On this page</span>
+                <span>CC3 testnet · 102031</span>
+              </div>
+              <div className="mobile-nav-links">
+                {HEADER_SECTION_LINKS.map((item) => (
+                  <a
+                    className="mobile-nav-link"
+                    href={item.href}
+                    key={item.href}
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    <span>
+                      <strong>{item.label}</strong>
+                      <small>{item.detail}</small>
+                    </span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                ))}
+              </div>
+            </nav>
+          ) : null}
         </header>
 
         <section className="hero" id="overview">
