@@ -79,8 +79,9 @@ framing earns it), Security.
 ## Submission checklist
 
 - [ ] Create/submit the BUIDL with the description above
-- [ ] Add the verify table + repo link
+- [ ] Add the verify table + repo link (https://github.com/fexx301/pegshield)
+- [ ] Deck PDF URL (requirement): https://raw.githubusercontent.com/fexx301/pegshield/main/docs/pegshield-deck.pdf
+- [ ] Project logo (optional): https://raw.githubusercontent.com/fexx301/pegshield/main/web/public/pegshield-mark.svg
 - [ ] Add tags
-- [ ] (If recorded) attach the demo video
-- [ ] After the v4 claim settles: update the table with the fresh receipt and
-      re-pin it at the top — same-day settlement evidence
+- [ ] (If recorded) attach the demo video — script above
+- [x] v4 claim settled 2026-09-12 — receipt already leads the table above
