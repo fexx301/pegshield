@@ -150,12 +150,12 @@ hide. That is the difference between a trust boundary and a trust claim.
 
 ## Start here: the user flow
 
-The public dashboard has three useful paths. They are intentionally separate so
+The public dashboard has two useful paths. They are intentionally separate so
 someone can understand the product before connecting a wallet.
 
 ### 1. Fastest path — completed payout, no wallet
 
-1. Open [the completed-policy walkthrough](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1).
+1. Open [the completed v4-policy walkthrough](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1).
 2. Choose **Explore a completed payout**.
 3. Follow the visible timeline: purchase → two Ethereum observations →
    Attestcoin verification → atomic CC3 payout.
@@ -165,29 +165,13 @@ someone can understand the product before connecting a wallet.
 This path is deterministic and does not claim a live economic depeg. It is the
 best first read or screen-recording path.
 
-### 2. Policy 2 — inspect discovery and prepare a claim
+For a live policy, oracle update times are not guaranteed. Two observations must
+qualify under the policy's interval and threshold; they do not prove that the
+price stayed below the threshold continuously between them. Proofs can age out
+as Attestcoin's accepted source-block window advances, so refresh evidence close
+to simulation time.
 
-1. Open the [policy-2 claim-preparation path](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2).
-2. Read the policy terms and wait for the panel to report its current
-   observation state. The app checks while the page is visible.
-3. When it reports that the policy is eligible, select **Prepare claim**.
-   The app discovers the two source events, obtains Attestcoin proof artifacts,
-   and simulates the CC3 transaction before asking for a signature.
-4. Review the proof and simulation result. A successful preparation means the
-   evidence currently simulates successfully; the app re-simulates before
-   requesting a signature, because proof freshness can change.
-
-Policy 2 was verified as eligible on 2026-09-06, but its on-chain state is
-time-dependent. Treat the panel's current status as authoritative; the URL is
-an example, not a permanent eligibility promise.
-
-Oracle update times are not guaranteed. Two observations must qualify under the
-policy's interval and threshold; they do not prove that the price stayed below
-the threshold continuously between them. Proofs can age out as Attestcoin's
-accepted source-block window advances, so refresh evidence close to simulation
-time.
-
-### 3. Full wallet path — buy and claim your own policy
+### 2. Full wallet path — buy and claim your own v4 policy
 
 1. On the dashboard choose **Buy test coverage** and connect a CC3 testnet
    wallet.
@@ -270,16 +254,15 @@ may change as the prototype evolves.
 
 ## Public evidence
 
-Use these links in order. Historical v1/v2 transactions are retained as
-context; the v3 links are the current product path.
+Use these links in order. Historical v1–v3 transactions are retained as
+context; the v4 links are the current product path.
 
 ### Start with the product
 
-- [Live dashboard — completed walkthrough (policy 1)](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1)
-- [Live dashboard — policy-2 claim-preparation example](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=2)
-- [CC3 v3 pool](https://creditcoin-testnet.blockscout.com/address/0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b)
-- [CC3 v3 TestUSD](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
-- [CC3 v3 Attestcoin adapter](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
+- [Live dashboard — completed walkthrough (v4 policy 1)](https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1)
+- [CC3 v4 pool](https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711)
+- [CC3 v4 TestUSD](https://creditcoin-testnet.blockscout.com/address/0xf79caedff7a2e4349f1a86fa39da151151d8afc8)
+- [CC3 v4 Attestcoin adapter](https://creditcoin-testnet.blockscout.com/address/0x07a87e5a533c0d39eb716dc38afd32b8701c2dd9)
 
 ### v4 settlement (current, 2026-09-12)
 
@@ -331,7 +314,7 @@ anchor. More distant events use separate single-item batch requests. The CC3
 contract simulation remains the final eligibility check.
 
 For a self-hosted deployment, set `NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS` to the
-v3 pool. Optionally set server-only `ETHEREUM_RPC_URL` to a provider that
+v4 pool. Optionally set server-only `ETHEREUM_RPC_URL` to a provider that
 supports historical block reads and 1,000-block log queries. PublicNode and
 dRPC are fallbacks for individual requests when the preferred endpoint is
 unavailable. No private key is required.
@@ -384,10 +367,10 @@ pnpm check
 ```
 
 To launch the dashboard locally after installing dependencies, expose the
-public v3 pool address and open `http://localhost:3000/?policy=1`:
+public v4 pool address and open `http://localhost:3000/?policy=1`:
 
 ```bash
-export NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS=0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b
+export NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS=0x53712c0cd4edfce30331a7aeac933086ab47c711
 pnpm --filter @pegshield/web exec next dev
 ```
 

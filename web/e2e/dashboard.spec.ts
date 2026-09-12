@@ -119,7 +119,7 @@ test("dashboard exposes the evidence-first purchase flow", async ({ page }) => {
   await page.getByRole("button", { name: /100 TestUSD paid/ }).click();
   await expect(
     page.getByRole("link", { name: /View the payout transfer/ }),
-  ).toHaveAttribute("href", /0xc509b357/);
+  ).toHaveAttribute("href", /0x575030ff/);
 });
 
 test("dashboard keeps a shareable policy selection after reload", async ({

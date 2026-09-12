@@ -8,21 +8,21 @@ const steps = [
     text: "Policy 1 reserved 100 TestUSD for the beneficiary fixed at purchase. The premium and payout conditions were locked on Creditcoin.",
     href:
       explorer +
-      "0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe",
+      "0x39359aab37bc067b62bd224dde98f05407bf72dbb90e19053a72dfe0ce0512f2",
     link: "View the purchase",
   },
   {
     title: "Two price observations",
-    text: "Ethereum rounds 1171 and 1172 reported $0.99985 and $0.99979. Both met this demo policy’s threshold and occurred within coverage, more than five minutes apart.",
-    href: "https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32",
+    text: "Ethereum rounds 1187 and 1188 reported $0.99986193 and $0.99986417. Both met this demo policy’s threshold and occurred within coverage, one hour apart.",
+    href: "https://etherscan.io/tx/0x622e76dad1762307848c53d5554e2f54526107b3a4df486e4ea9441e8adfe02d",
     link: "View the first observation",
   },
   {
     title: "Evidence verified on Creditcoin",
-    text: "One claim transaction verified both Ethereum receipts through Attestcoin and checked the policy’s price, timing, beneficiary, and reserve rules.",
+    text: "One v4 claim transaction verified both Ethereum receipts through Attestcoin and checked the policy’s price, timing, beneficiary, and reserve rules.",
     href:
       explorer +
-      "0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5",
+      "0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8",
     link: "View the verification transaction",
   },
   {
@@ -30,7 +30,7 @@ const steps = [
     text: "The pool transferred exactly 100 TestUSD to the locked beneficiary and marked policy 1 Claimed. This policy cannot pay again.",
     href:
       explorer +
-      "0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5",
+      "0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8",
     link: "View the payout transfer",
   },
 ];
@@ -47,7 +47,7 @@ export function CompletedPayout() {
       <div className="section-heading">
         <h2 id="completed-heading">Follow a completed payout.</h2>
         <p>
-          A recorded transaction on CC3 testnet. Explore each step without a
+          A current v4 settlement on CC3 testnet. Explore each step without a
           wallet.
         </p>
       </div>
@@ -73,7 +73,7 @@ export function CompletedPayout() {
           aria-live="polite"
         >
           <span className="mono-label">
-            Recorded example · policy 1 · step {selected + 1} of 4
+            Recorded example · v4 policy 1 · step {selected + 1} of 4
           </span>
           <h3>{step.title}</h3>
           <p>{step.text}</p>
@@ -88,7 +88,7 @@ export function CompletedPayout() {
           {selected === 1 && (
             <a
               className="evidence-link"
-              href="https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9"
+              href="https://etherscan.io/tx/0x6601d8b8013f791c7f73a19105b4ac3308d11ce05348cd80c6d5742c403a61b0"
               target="_blank"
               rel="noreferrer"
             >
@@ -98,7 +98,7 @@ export function CompletedPayout() {
         </article>
       </div>
       <p className="demo-disclosure">
-        Demonstration threshold: $1.00989675. These ordinary market observations
+        Demonstration threshold: $1.00983312. These ordinary market observations
         demonstrate the payout mechanism, not an actual economic USDC depeg.
         TestUSD has no real monetary value.
       </p>

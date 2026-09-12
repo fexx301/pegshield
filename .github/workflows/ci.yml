@@ -75,13 +75,13 @@ jobs:
           fi
 
   e2e-local:
-    # The public v3 testnet pool (also published in README and deployment
+    # The public v4 testnet pool (also published in README and deployment
     # manifests). NEXT_PUBLIC_ values are inlined at build time, so this
     # must be present for the build step, matching local development where
     # web/.env.local provides it.
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS: "0x9be0af5ad671e1dbb2e9c421f19479c04cf3b27b"
+      NEXT_PUBLIC_PEGSHIELD_POOL_ADDRESS: "0x53712c0cd4edfce30331a7aeac933086ab47c711"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10

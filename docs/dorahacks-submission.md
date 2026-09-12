@@ -52,7 +52,7 @@ survive the tail event.
 | v4 confirmation, round 1188                              | https://etherscan.io/tx/0x6601d8b8013f791c7f73a19105b4ac3308d11ce05348cd80c6d5742c403a61b0                      |
 | v4 pool                                                  | https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711                    |
 | v4 settlement manifest (schema-validated, live-verified) | deployments/cc3-testnet-v4.json in the repo                                                                     |
-| Live dashboard — completed walkthrough (v3 policy 1)     | https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1                                                          |
+| Live dashboard — completed walkthrough (v4 policy 1)     | https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1                                                          |
 | v3 atomic claim + 100 tUSD payout (2026-09-04)           | https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5 |
 | v3 policy 1 purchase                                     | https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe |
 | v3 source, round 1171                                    | https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32                      |
