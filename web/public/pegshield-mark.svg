@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-labelledby="pegshield-mark-title pegshield-mark-desc" color="#38BDF8">
-  <title id="pegshield-mark-title">PegShield logo</title>
-  <desc id="pegshield-mark-desc">An offset circular peg held within two calibrated containment brackets.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc" color="#38BDF8">
+  <title id="title">PegShield logo</title>
+  <desc id="desc">An offset circular peg held within two calibrated containment brackets.</desc>
   <!-- Change currentColor in CSS to use the mark on any solid background. -->
   <g fill="currentColor">
     <!-- Left containment bracket -->
