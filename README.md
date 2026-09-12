@@ -217,6 +217,14 @@ completed the v3 atomic two-proof path: Ethereum rounds 1171 and 1172 were
 authenticated in one transaction and the pool transferred exactly 100 tUSD to
 the beneficiary locked at purchase.
 
+The current deployment is v4 (2026-09-12): a fresh pool, adapter, and
+TestUSD with a same-day settled policy. Policy 1 was purchased at
+08:01 UTC and claimed atomically at 08:15 UTC the same day — Ethereum
+rounds 1187 and 1188 were authenticated in one transaction and the pool
+transferred exactly 100 tUSD to the beneficiary locked at purchase:
+[claim receipt](https://creditcoin-testnet.blockscout.com/tx/0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8).
+The v3 settlement below remains as the first end-to-end proof.
+
 The repository also contains a reproducible offline core:
 
 - `AttestcoinVerifierAdapter` calls the official Attestcoin proof boundary and
@@ -273,7 +281,17 @@ context; the v3 links are the current product path.
 - [CC3 v3 TestUSD](https://creditcoin-testnet.blockscout.com/address/0xa82e7ed8a10da85d64e3c41d0ffbe5b95e1b30f9)
 - [CC3 v3 Attestcoin adapter](https://creditcoin-testnet.blockscout.com/address/0x9e1d5aec273802bde517bb55b3dec10b09e71dbf)
 
-### Completed v3 settlement
+### v4 settlement (current, 2026-09-12)
+
+- [Policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x39359aab37bc067b62bd224dde98f05407bf72dbb90e19053a72dfe0ce0512f2)
+- [Atomic claim and 100 tUSD payout](https://creditcoin-testnet.blockscout.com/tx/0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8)
+- [Ethereum source event, round 1187](https://etherscan.io/tx/0x622e76dad1762307848c53d5554e2f54526107b3a4df486e4ea9441e8adfe02d)
+- [Ethereum confirmation, round 1188](https://etherscan.io/tx/0x6601d8b8013f791c7f73a19105b4ac3308d11ce05348cd80c6d5742c403a61b0)
+- [CC3 v4 pool](https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711)
+- [v4 deployment and gas-incident evidence](docs/evidence/P29-v4-deployment.md)
+- [v4 settlement manifest](deployments/cc3-testnet-v4.json)
+
+### Completed v3 settlement (2026-09-04)
 
 - [Policy 1 purchase](https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe)
 - [Atomic claim and 100 tUSD payout](https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5)
@@ -291,7 +309,7 @@ context; the v3 links are the current product path.
 - [Deployment evidence](docs/evidence/P11-deployment.md)
 - [Proof-service evidence](docs/evidence/P16-proof-service.md)
 - [Browser E2E evidence](docs/evidence/P17-e2e.md)
-- [Atomic v3 implementation evidence](docs/evidence/P27-atomic-v3.md)
+- [v4 deployment and settlement evidence](docs/evidence/P29-v4-deployment.md)
 
 ### Historical context
 

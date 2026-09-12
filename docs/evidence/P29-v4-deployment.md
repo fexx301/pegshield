@@ -1,6 +1,6 @@
 # P29 — v4 deployment, CC3 gas-estimation incident, and manual recovery
 
-Status: **DEPLOYED — policy 1 active, awaiting qualifying observations**
+Status: **SETTLED — v4 policy 1 claimed atomically on 2026-09-12**
 
 ## Why a v4 deployment
 
@@ -108,3 +108,38 @@ miss a valid later pair when the first two land within the 300-second
 interval), and artifact construction rounds the observed answer to the
 nearest integer before comparing it to the indexed topic (a raw float
 conversion can be non-integral and throw).
+
+## Settlement (2026-09-12 08:15 UTC)
+
+The watcher detected the qualifying pair one day after deployment:
+
+- Round 1187: answer `0.99986193`, updated 1789196435 (07:47:15 UTC), block
+  25959697, transaction
+  `0x622e76dad1762307848c53d5554e2f54526107b3a4df486e4ea9441e8adfe02d`
+- Round 1188: answer `0.99986417`, updated 1789200035 (08:40:35 UTC), block
+  25959995, transaction
+  `0x6601d8b8013f791c7f73a19105b4ac3308d11ce05348cd80c6d5742c403a61b0`
+- Interval: exactly 3,600 seconds (product minimum is 300)
+
+The claim pipeline prepared per-transaction single-item batch proofs, verified
+both through the deployed v4 adapter's compiled `verifySourceLog` (448-byte
+authenticated `VerifiedSourceLog` each), simulated the full
+`submitClaim` calldata via `eth_call` (no revert), and submitted with an
+explicit 2,000,000 gas limit as the permissionless relayer.
+
+Receipt `0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8`
+(block 5,473,478, 616,966 gas, four events: `BreachObserved`,
+`ConfirmationObserved`, `PolicyPaid`, ERC-20 `Transfer`):
+
+- Policy 1 state: `Active` → `Claimed`; `firstRoundId` 1187; `firstBreachAt`
+  1789196435; `firstEventId`
+  `0xac4afec2eb57d135722bfb20399abb117add00339c38fc7ccba012fcc307a1d2`
+- Payout: exactly 100 TestUSD to the beneficiary locked at purchase
+  (`0x3dFF45B4…334c`), whose token balance moved from 997.5M (mint 1,000M
+  minus 2.5M premium) to 1,097.5M — an exact 100M credit
+- Pool accounting: reserved capital 1,000,000,000 → 0; accounted capital
+  1,002,500,000 → 902,500,000
+
+This is the second complete end-to-end atomic settlement on CC3 (after the v3
+settlement of 2026-09-04, P28) and the first same-day
+purchase-to-payout cycle: policy purchased 08:01 UTC, claimed 08:15 UTC.

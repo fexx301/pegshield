@@ -20,11 +20,15 @@ An oracle can assert a depeg. PegShield's contract verifies the receipt of the
 Chainlink transmission itself. The adjuster becomes an on-chain fact.
 
 Live and settled (verify in five minutes):
-• Atomic two-proof claim + 100 tUSD payout on CC3 — receipt-linked below
-• Source events: Ethereum rounds 1171/1172, inclusion-proven via Attestcoin
-• Fresh v4 deployment (2026-09-11) with an active policy — current-dated
-evidence chain, schema-validated manifest
-• Underwriter-funded pool with exact reserve accounting, premiums, expiry
+• SAME-DAY v4 atomic claim + 100 tUSD payout (2026-09-12, purchase-to-payout
+in 14 minutes):
+https://creditcoin-testnet.blockscout.com/tx/0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8
+• v4 source events: Ethereum rounds 1187/1188, exactly 1h apart,
+inclusion-proven via Attestcoin
+• First end-to-end settlement (v3, 2026-09-04): receipt + rounds 1171/1172
+in the verify table
+• Fresh v4 pool with underwriter-funded reserves, exact accounting,
+premiums, expiry — schema-validated manifest
 • 58 Foundry tests (invariants, reentrancy), full CI green, ABI drift gates,
 pinned official dependency code hashes
 
@@ -40,19 +44,24 @@ survive the tail event.
 
 ## Verify-everything table (add to the submission's Details)
 
-| What                                      | Where                                                                                                           |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Live dashboard (completed walkthrough)    | https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1                                                          |
-| v3 atomic claim + 100 tUSD payout (CC3)   | https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5 |
-| v3 policy 1 purchase (CC3)                | https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe |
-| Ethereum source, round 1171               | https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32                      |
-| Ethereum confirmation, round 1172         | https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9                      |
-| v4 pool (fresh deployment, 2026-09-11)    | https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711                    |
-| v4 policy 1 purchase (CC3)                | https://creditcoin-testnet.blockscout.com/tx/0x39359aab37bc067b62bd224dde98f05407bf72dbb90e19053a72dfe0ce0512f2 |
-| v4 settlement manifest                    | deployments/cc3-testnet-v4.json in the repo (schema-validated, live-verified)                                   |
-| Source code                               | https://github.com/fexx301/pegshield                                                                            |
-| Why-Attestcoin argument + integration map | README.md § "Why Attestcoin"                                                                                    |
-| Proof-lifetime study                      | docs/evidence/P27-atomic-v3.md + P29                                                                            |
+| v4 SAME-DAY atomic claim + payout (2026-09-12) | https://creditcoin-testnet.blockscout.com/tx/0x575030ff19daffcbbc004f66fdf00cd1489341b3de80bcc424c5a32acc2120c8 |
+| v4 policy 1 purchase (14 min before claim) | https://creditcoin-testnet.blockscout.com/tx/0x39359aab37bc067b62bd224dde98f05407bf72dbb90e19053a72dfe0ce0512f2 |
+| v4 source, round 1187 | https://etherscan.io/tx/0x622e76dad1762307848c53d5554e2f54526107b3a4df486e4ea9441e8adfe02d |
+| v4 confirmation, round 1188 | https://etherscan.io/tx/0x6601d8b8013f791c7f73a19105b4ac3308d11ce05348cd80c6d5742c403a61b0 |
+| v4 pool | https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711 |
+
+| What | Where |
+| Live dashboard (completed walkthrough) | https://web-three-zeta-pp0cpatyl9.vercel.app/?policy=1 |
+| v3 atomic claim + 100 tUSD payout (CC3) | https://creditcoin-testnet.blockscout.com/tx/0xc509b3577ebd9cbe3bc65d515e46d90ee88e58a0c97bdf43ae35c338b8ababb5 |
+| v3 policy 1 purchase (CC3) | https://creditcoin-testnet.blockscout.com/tx/0x70e7184d8c7479960827a2f5056e8624a7b95fc49ba0e69af6597d3a588fd7fe |
+| Ethereum source, round 1171 | https://etherscan.io/tx/0x4876a2e3b835394a51fcab498775821df3c29e817481a890cba24a10a7ae9e32 |
+| Ethereum confirmation, round 1172 | https://etherscan.io/tx/0x53bb235fb9f71f983e1d602eaedd9a834e153783e50828b23b65750540c451b9 |
+| v4 pool (fresh deployment, 2026-09-11) | https://creditcoin-testnet.blockscout.com/address/0x53712c0cd4edfce30331a7aeac933086ab47c711 |
+| v4 policy 1 purchase (CC3) | https://creditcoin-testnet.blockscout.com/tx/0x39359aab37bc067b62bd224dde98f05407bf72dbb90e19053a72dfe0ce0512f2 |
+| v4 settlement manifest | deployments/cc3-testnet-v4.json in the repo (schema-validated, live-verified) |
+| Source code | https://github.com/fexx301/pegshield |
+| Why-Attestcoin argument + integration map | README.md § "Why Attestcoin" |
+| Proof-lifetime study | docs/evidence/P27-atomic-v3.md + P29 |
 
 <!-- When the v4 claim lands, insert above the v3 rows:
 | v4 atomic claim + payout (CURRENT) | <tx link> |
